@@ -1,6 +1,6 @@
 'use strict';
 
-function createGallery({ document, fetch: fetchImpl }) {
+function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   const root = document.createElement('div');
   root.className = 'gallery';
 
@@ -13,6 +13,12 @@ function createGallery({ document, fetch: fetchImpl }) {
 
   const grid = document.createElement('div');
   grid.className = 'gallery-grid';
+
+  const loadMoreBtn = document.createElement('button');
+  loadMoreBtn.type = 'button';
+  loadMoreBtn.className = 'gallery-more';
+  loadMoreBtn.textContent = 'Load more';
+  loadMoreBtn.hidden = true;
 
   const detail = document.createElement('div');
   detail.className = 'gallery-detail';
@@ -38,14 +44,22 @@ function createGallery({ document, fetch: fetchImpl }) {
   closeBtn.textContent = 'Close';
 
   detail.append(detailImg, detailMeta, postLink, deleteBtn, closeBtn);
-  root.append(heading, grid, emptyEl, detail);
+  root.append(heading, grid, emptyEl, loadMoreBtn, detail);
 
   let items = [];
+  let page = 0;
+  let total = 0;
+  let loading = false;
   let detailItem = null;
   let confirmArmed = false;
 
   function srcFor(item) {
     return `/collections/${item.file_path}`;
+  }
+
+  function updateLoadMore() {
+    loadMoreBtn.disabled = loading;
+    loadMoreBtn.hidden = page * pageSize >= total;
   }
 
   function render() {
@@ -63,6 +77,7 @@ function createGallery({ document, fetch: fetchImpl }) {
       card.addEventListener('click', () => openDetail(item));
       grid.append(card);
     }
+    updateLoadMore();
   }
 
   function openDetail(item) {
@@ -90,22 +105,58 @@ function createGallery({ document, fetch: fetchImpl }) {
       return false;
     }
     items = items.filter((item) => item.post_id !== postId);
+    total = Math.max(0, total - 1);
     render();
     return true;
   }
 
+  async function fetchPage(targetPage) {
+    const res = await fetchImpl(`/api/earned?page=${targetPage}&limit=${pageSize}`);
+    if (!res.ok) {
+      return null;
+    }
+    return res.json();
+  }
+
   async function load() {
+    loading = true;
+    updateLoadMore();
     try {
-      const res = await fetchImpl('/api/earned');
-      if (!res.ok) {
-        return;
+      const data = await fetchPage(1);
+      if (data) {
+        items = data.entries || [];
+        page = 1;
+        total = typeof data.total === 'number' ? data.total : items.length;
       }
-      const data = await res.json();
-      items = data.entries || [];
-      render();
     } catch {
       // gallery stays empty on failure
+    } finally {
+      loading = false;
     }
+    render();
+  }
+
+  async function loadMore() {
+    if (loading) {
+      return;
+    }
+    loading = true;
+    updateLoadMore();
+    try {
+      const data = await fetchPage(page + 1);
+      if (data) {
+        items = items.concat(data.entries || []);
+        page += 1;
+        if (typeof data.total === 'number') {
+          total = data.total;
+        }
+      }
+    } catch {
+      // keep the loaded items on failure
+    } finally {
+      loading = false;
+    }
+    render();
   }
 
   deleteBtn.addEventListener('click', () => {
@@ -125,10 +176,14 @@ function createGallery({ document, fetch: fetchImpl }) {
   });
 
   closeBtn.addEventListener('click', closeDetail);
+  loadMoreBtn.addEventListener('click', () => {
+    loadMore();
+  });
 
   return {
     el: root,
     load,
+    loadMore,
     render,
     openDetail,
     closeDetail,

@@ -332,11 +332,11 @@ test('a hostile banner tag cannot write outside the collections directory', asyn
 });
 
 const earnedEntries = [
-  { post_id: 1, file_path: 'tag/1.jpg', banner_tag: 'tag' },
-  { post_id: 2, file_path: 'tag/2.jpg', banner_tag: 'tag' },
+  { post_id: 1, file_path: 'tag/1.jpg', banner_tag: 'tag', earned_at: '2026-01-01T00:00:00.000Z' },
+  { post_id: 2, file_path: 'tag/2.jpg', banner_tag: 'tag', earned_at: '2026-01-02T00:00:00.000Z' },
 ];
 
-test('GET /api/earned lists earned images', async (t) => {
+test('GET /api/earned lists earned images with pagination metadata', async (t) => {
   const dataDir = tempDir();
   const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
   state.get().earned_posts = earnedEntries;
@@ -355,6 +355,84 @@ test('GET /api/earned lists earned images', async (t) => {
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.equal(data.entries.length, 2);
+  assert.equal(data.page, 1);
+  assert.equal(data.limit, 30);
+  assert.equal(data.total, 2);
+});
+
+test('GET /api/earned returns newest entries first', async (t) => {
+  const dataDir = tempDir();
+  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
+  state.get().earned_posts = [
+    { post_id: 1, file_path: 'tag/1.jpg', earned_at: '2026-01-01T00:00:00.000Z' },
+    { post_id: 2, file_path: 'tag/2.jpg', earned_at: '2026-01-05T00:00:00.000Z' },
+    { post_id: 3, file_path: 'tag/3.jpg', earned_at: '2026-01-03T00:00:00.000Z' },
+  ];
+  state.save();
+
+  const base = await startServer(
+    t,
+    createApp({
+      dataDir,
+      collectionsDir: tempDir(),
+      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
+    }).app,
+  );
+
+  const data = await (await fetch(`${base}/api/earned?limit=3`)).json();
+  assert.deepEqual(
+    data.entries.map((e) => e.post_id),
+    [2, 3, 1],
+  );
+});
+
+test('GET /api/earned paginates with page and limit', async (t) => {
+  const dataDir = tempDir();
+  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
+  state.get().earned_posts = [1, 2, 3, 4, 5].map((id) => ({
+    post_id: id,
+    file_path: `tag/${id}.jpg`,
+    earned_at: `2026-01-0${id}T00:00:00.000Z`,
+  }));
+  state.save();
+
+  const base = await startServer(
+    t,
+    createApp({
+      dataDir,
+      collectionsDir: tempDir(),
+      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
+    }).app,
+  );
+
+  const page1 = await (await fetch(`${base}/api/earned?limit=2&page=1`)).json();
+  assert.deepEqual(page1.entries.map((e) => e.post_id), [5, 4]);
+  assert.equal(page1.total, 5);
+  assert.equal(page1.page, 1);
+
+  const page3 = await (await fetch(`${base}/api/earned?limit=2&page=3`)).json();
+  assert.deepEqual(page3.entries.map((e) => e.post_id), [1]);
+  assert.equal(page3.total, 5);
+
+  const past = await (await fetch(`${base}/api/earned?limit=2&page=4`)).json();
+  assert.deepEqual(past.entries, []);
+  assert.equal(past.total, 5);
+});
+
+test('GET /api/earned rejects invalid pagination', async (t) => {
+  const base = await startServer(
+    t,
+    createApp({
+      dataDir: tempDir(),
+      collectionsDir: tempDir(),
+      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
+    }).app,
+  );
+
+  for (const query of ['page=0', 'page=-1', 'page=abc', 'limit=0', 'limit=300', 'limit=abc']) {
+    const res = await fetch(`${base}/api/earned?${query}`);
+    assert.equal(res.status, 422, `expected 422 for ${query}`);
+  }
 });
 
 test('DELETE /api/earned/:postId removes the file and metadata', async (t) => {

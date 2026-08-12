@@ -198,13 +198,17 @@ Slice 5 shows the earned collection and supports deletion.
   - `test/state.test.js` — the state lists earned posts, `removeEarned`
     deletes the file and metadata (including queued downloads), tolerates
     a missing file, and reports not-removed for an unknown post.
-  - `test/routes.test.js` — `GET /api/earned` lists earned images,
-    `DELETE /api/earned/:postId` removes the file and metadata and
-    returns 404 for an unknown post, and `collections/` images are served
-    statically.
-  - `test/client/gallery.test.js` — the gallery renders a grid, shows an
-    empty state, opens a full-size view on click, requires confirmation
-    before deleting (and removes the item afterwards), and closes without
+  - `test/routes.test.js` — `GET /api/earned` lists earned images newest
+    first with pagination metadata (`page`, `limit`, `total`), paginates
+    across pages, returns an empty page past the end, and rejects invalid
+    pagination with 422. `DELETE /api/earned/:postId` removes the file
+    and metadata and returns 404 for an unknown post, and `collections/`
+    images are served statically.
+  - `test/client/gallery.test.js` — the gallery renders a grid, hides the
+    load-more button when everything fits on one page, loads more pages
+    and appends cards, resets to the first page on reload, shows an empty
+    state, opens a full-size view on click, requires confirmation before
+    deleting (and removes the item afterwards), and closes without
     deleting.
 - `npm run lint` — clean output.
 
@@ -221,7 +225,14 @@ Slice 5 shows the earned collection and supports deletion.
 7. Confirm the deleted image becomes eligible again by rolling: it can
    appear in a new roll pool.
 8. Confirm `curl "http://127.0.0.1:3000/api/earned"` lists the remaining
-   images and `curl -X DELETE .../api/earned/<id>` removes one.
+   images newest first and `curl -X DELETE .../api/earned/<id>` removes
+   one.
+9. Bank more than 30 images and confirm the Collection shows the newest
+   ones first with a "Load more" button that appends the rest.
+10. Confirm pagination works via the API:
+    `curl "http://127.0.0.1:3000/api/earned?limit=2&page=2"` returns the
+    next slice with `page`, `limit`, and `total` fields, and
+    `?limit=0` returns 422.
 
 ## Slice 6 — Economy
 

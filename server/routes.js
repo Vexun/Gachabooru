@@ -5,6 +5,30 @@ const { removeEarned } = require('./state');
 const economy = require('./economy');
 const { safeTag } = require('./download');
 
+const DEFAULT_PAGE_SIZE = 30;
+const MAX_PAGE_SIZE = 200;
+
+function parsePagination(query) {
+  const page = query.page === undefined ? 1 : Number(query.page);
+  const limit = query.limit === undefined ? DEFAULT_PAGE_SIZE : Number(query.limit);
+  if (
+    !Number.isInteger(page) ||
+    page < 1 ||
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > MAX_PAGE_SIZE
+  ) {
+    return null;
+  }
+  return { page, limit };
+}
+
+function newestFirst(entries) {
+  return [...entries].sort(
+    (a, b) => (new Date(b.earned_at).getTime() || 0) - (new Date(a.earned_at).getTime() || 0),
+  );
+}
+
 function createRouter(ctx) {
   const router = express.Router();
   const now = () => (ctx.now ? ctx.now() : Date.now());
@@ -81,7 +105,19 @@ function createRouter(ctx) {
   });
 
   router.get('/earned', (req, res) => {
-    res.json({ entries: ctx.store.get().earned_posts });
+    const pagination = parsePagination(req.query);
+    if (!pagination) {
+      return res.status(422).json({ error: 'invalid pagination' });
+    }
+    const earned = newestFirst(ctx.store.get().earned_posts);
+    const start = (pagination.page - 1) * pagination.limit;
+    const entries = earned.slice(start, start + pagination.limit);
+    res.json({
+      entries,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: earned.length,
+    });
   });
 
   router.delete('/earned/:postId', (req, res) => {

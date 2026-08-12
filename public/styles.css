@@ -245,6 +245,21 @@ main {
   padding: 1rem 0;
 }
 
+.gallery-more {
+  margin-top: 0.75rem;
+  padding: 0.4rem 1.25rem;
+  border: 1px solid var(--panel-2);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.gallery-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
