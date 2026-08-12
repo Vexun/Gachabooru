@@ -57,9 +57,11 @@ completely safe for work. There is no rating setting.
 
 ## Collection
 
-Banked images are stored under `collections/<banner_tag>/` and listed in
-the gallery. Click an image for a full-size view. Delete an image to
-remove its file and metadata; the image becomes eligible for future rolls.
+Banked images are stored under `collections/<banner_tag>/`. Open the
+Collection page (via the header link) to browse them in a gallery, newest
+first, with a Load more button for large collections. Click an image for
+a full-size view. Delete an image to remove its file and metadata; the
+image becomes eligible for future rolls.
 
 ## Configuration
 

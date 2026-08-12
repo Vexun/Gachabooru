@@ -5,13 +5,12 @@ function createApp({
   fetch: fetchImpl,
   createBannerPicker: pickerFactory,
   createRoll: rollFactory,
-  createGallery: galleryFactory,
   createWebSocket,
+  wireCloseDetection: closeDetection,
 }) {
   const statusEl = document.getElementById('server-status');
   const bannerSection = document.getElementById('banner-section');
   const rollSection = document.getElementById('roll-section');
-  const gallerySection = document.getElementById('gallery-section');
   const gameState = { banner: null };
 
   async function refreshStatus() {
@@ -49,68 +48,22 @@ function createApp({
     if (!rollSection || !rollFactory) {
       return null;
     }
-    const roll = rollFactory({
-      document,
-      fetch: fetchImpl,
-      onBanked: () => {
-        if (gallery) {
-          gallery.load();
-        }
-      },
-    });
+    const roll = rollFactory({ document, fetch: fetchImpl });
     rollSection.append(roll.el);
     return roll;
   }
 
-  function wireGallery() {
-    if (!gallerySection || !galleryFactory) {
-      return null;
-    }
-    const gallery = galleryFactory({ document, fetch: fetchImpl });
-    gallerySection.append(gallery.el);
-    return gallery;
-  }
-
   const roll = wireRoll();
-  const gallery = wireGallery();
-
-  function wireCloseDetection() {
-    if (!createWebSocket) {
-      return;
-    }
-    const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
-    let attempts = 0;
-    function connect() {
-      let ws;
-      try {
-        ws = createWebSocket(wsUrl);
-      } catch {
-        return;
-      }
-      ws.onopen = () => {
-        attempts = 0;
-      };
-      ws.onerror = () => {};
-      ws.onclose = () => {
-        attempts += 1;
-        if (attempts <= 3) {
-          setTimeout(connect, 2000 * attempts);
-        }
-      };
-    }
-    connect();
-  }
 
   return {
     state: gameState,
     init: () => {
       wireBannerPicker();
-      wireCloseDetection();
+      if (closeDetection && createWebSocket) {
+        closeDetection(createWebSocket);
+      }
       if (roll) {
         roll.loadBalance();
-      }
-      if (gallery) {
-        gallery.load();
       }
       return refreshStatus();
     },
@@ -123,8 +76,8 @@ if (typeof window !== 'undefined') {
     fetch,
     createBannerPicker: typeof createBannerPicker !== 'undefined' ? createBannerPicker : null,
     createRoll: typeof createRoll !== 'undefined' ? createRoll : null,
-    createGallery: typeof createGallery !== 'undefined' ? createGallery : null,
     createWebSocket: (url) => new WebSocket(url),
+    wireCloseDetection: typeof wireCloseDetection !== 'undefined' ? wireCloseDetection : null,
   });
   app.init();
 }

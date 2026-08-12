@@ -168,8 +168,8 @@ image downloads.
     all 5 banks all 5, the coin flip resolves heads/tails fairly, banking
     hides the flip panel, a second back-out press does not wipe the
     results, and banking fires the `onBanked` callback.
-  - `test/client/app.test.js` — banking a roll refreshes the gallery
-    (the `onBanked` wiring).
+  - `test/client/app.test.js` — the main page renders the title and shows
+    the server status.
 - `npm run lint` — clean output.
 
 ### Manual smoke
@@ -210,6 +210,11 @@ Slice 5 shows the earned collection and supports deletion.
     state, opens a full-size view on click, requires confirmation before
     deleting (and removes the item afterwards), and closes without
     deleting.
+  - `test/client/collection.test.js` — the collection page mounts the
+    gallery and loads it, and opens the close-detection websocket.
+  - `test/client/close-detection.test.js` — the websocket keep-alive
+    reconnects up to three times then stops, and an open resets the retry
+    count.
 - `npm run lint` — clean output.
 
 ### Manual smoke
@@ -217,7 +222,8 @@ Slice 5 shows the earned collection and supports deletion.
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Roll, win a few cards, and back out to bank them.
-4. Scroll to the Collection section and confirm the earned images appear.
+4. Click Collection in the header to open the Collection page and confirm
+   the earned images appear.
 5. Click an image and confirm the full-size view opens with a link to the
    Danbooru post.
 6. Click Delete, confirm the confirmation prompt, and confirm the image
@@ -295,8 +301,8 @@ posts (completely safe for work).
 3. Confirm there is no rating picker in the UI.
 4. Roll on a large tag and confirm every drawn post is rated general.
 5. Run the full manual flow: pick a tag, roll, flip, win some, back out,
-   open the gallery, delete an image, and watch the balance drain and
-   recharge.
+   open the Collection page, delete an image, and watch the balance drain
+   and recharge.
 6. Confirm `curl "http://127.0.0.1:3000/api/settings"` returns 404 (the
    settings endpoint is gone).
 

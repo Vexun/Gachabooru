@@ -39,6 +39,17 @@ header h1 {
   font-size: 1.25rem;
 }
 
+.nav-link {
+  margin-left: auto;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
+}
+
 .status {
   font-size: 0.8rem;
   color: var(--muted);
