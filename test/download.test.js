@@ -1,0 +1,155 @@
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const { Downloader, safeExt, safeTag } = require('../server/download');
+const { tempDir } = require('./helpers');
+
+function arrayBufferOf(str) {
+  return new TextEncoder().encode(str).buffer;
+}
+
+function okFetch(body) {
+  return async () => ({ ok: true, status: 200, arrayBuffer: async () => arrayBufferOf(body) });
+}
+
+function post(id, ext = 'jpg') {
+  return {
+    id,
+    file_ext: ext,
+    file_url: `https://cdn.donmai.us/${id}.${ext}`,
+    tag_string: `tag_${id}`,
+  };
+}
+
+function freshState() {
+  return { earned_posts: [], pending_downloads: [] };
+}
+
+test('safeExt sanitizes the file extension', () => {
+  assert.equal(safeExt('jpg'), 'jpg');
+  assert.equal(safeExt('JPEG'), 'jpeg');
+  assert.equal(safeExt('bad<ext>'), 'badext');
+  assert.equal(safeExt(''), 'jpg');
+  assert.equal(safeExt(undefined), 'jpg');
+});
+
+test('safeTag prevents path traversal in banner tags', () => {
+  assert.equal(safeTag('hatsune_miku'), 'hatsune_miku');
+  assert.equal(safeTag('../../etc'), '______etc');
+  assert.equal(safeTag('../tag'), '___tag');
+  assert.equal(safeTag(''), 'untagged');
+});
+
+test('bank downloads the file and records metadata', async () => {
+  const dir = tempDir();
+  const downloader = new Downloader({ collectionsDir: dir, fetchImpl: okFetch('imgdata') });
+  const state = freshState();
+
+  const result = await downloader.bank(state, { post: post(123), bannerTag: 'hatsune_miku' });
+
+  assert.equal(result.downloaded, true);
+  const fullPath = path.join(dir, 'hatsune_miku', '123.jpg');
+  assert.equal(fs.readFileSync(fullPath, 'utf8'), 'imgdata');
+  assert.equal(state.earned_posts.length, 1);
+  const entry = state.earned_posts[0];
+  assert.equal(entry.post_id, 123);
+  assert.equal(entry.banner_tag, 'hatsune_miku');
+  assert.equal(entry.file_path, path.join('hatsune_miku', '123.jpg'));
+  assert.equal(entry.danbooru_url, 'https://danbooru.donmai.us/posts/123');
+  assert.equal(entry.tags, 'tag_123');
+  assert.equal(state.pending_downloads.length, 0);
+});
+
+test('bank retries on failure then writes the file', async () => {
+  const dir = tempDir();
+  let attempts = 0;
+  const downloader = new Downloader({
+    collectionsDir: dir,
+    backoffMs: 0,
+    retries: 2,
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return { ok: false, status: 403 };
+      }
+      return { ok: true, status: 200, arrayBuffer: async () => arrayBufferOf('retried') };
+    },
+  });
+  const state = freshState();
+
+  const result = await downloader.bank(state, { post: post(9), bannerTag: 'touhou' });
+
+  assert.equal(result.downloaded, true);
+  assert.ok(attempts >= 2);
+  assert.equal(fs.readFileSync(path.join(dir, 'touhou', '9.jpg'), 'utf8'), 'retried');
+});
+
+test('bank queues a failed download and keeps the metadata', async () => {
+  const dir = tempDir();
+  const downloader = new Downloader({
+    collectionsDir: dir,
+    backoffMs: 0,
+    retries: 0,
+    fetchImpl: async () => ({ ok: false, status: 503 }),
+  });
+  const state = freshState();
+
+  const result = await downloader.bank(state, { post: post(5), bannerTag: 'tag' });
+
+  assert.equal(result.downloaded, false);
+  assert.equal(result.queued, true);
+  assert.equal(state.earned_posts.length, 1);
+  assert.equal(state.pending_downloads.length, 1);
+  assert.equal(state.pending_downloads[0].post_id, 5);
+  assert.equal(fs.existsSync(path.join(dir, 'tag', '5.jpg')), false);
+});
+
+test('bank is idempotent per post', async () => {
+  const dir = tempDir();
+  let downloads = 0;
+  const downloader = new Downloader({
+    collectionsDir: dir,
+    backoffMs: 0,
+    fetchImpl: async () => {
+      downloads += 1;
+      return { ok: true, status: 200, arrayBuffer: async () => arrayBufferOf('x') };
+    },
+  });
+  const state = freshState();
+
+  const first = await downloader.bank(state, { post: post(1), bannerTag: 'a' });
+  const second = await downloader.bank(state, { post: post(1), bannerTag: 'a' });
+
+  assert.equal(first.downloaded, true);
+  assert.equal(second.already, true);
+  assert.equal(state.earned_posts.length, 1);
+  assert.equal(downloads, 1);
+});
+
+test('bank retries a missing file for an already-earned post', async () => {
+  const dir = tempDir();
+  let downloads = 0;
+  const downloader = new Downloader({
+    collectionsDir: dir,
+    backoffMs: 0,
+    retries: 0,
+    fetchImpl: async () => {
+      downloads += 1;
+      return { ok: true, status: 200, arrayBuffer: async () => arrayBufferOf('y') };
+    },
+  });
+  const state = freshState();
+
+  const first = await downloader.bank(state, { post: post(2), bannerTag: 'b' });
+  assert.equal(first.downloaded, true);
+  fs.rmSync(path.join(dir, 'b', '2.jpg'));
+
+  const retry = await downloader.bank(state, { post: post(2), bannerTag: 'b' });
+  assert.equal(retry.downloaded, true);
+  assert.equal(fs.existsSync(path.join(dir, 'b', '2.jpg')), true);
+  assert.equal(state.earned_posts.length, 1);
+});
