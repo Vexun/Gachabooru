@@ -279,6 +279,79 @@ test('POST /api/roll/:postId rejects a missing banner tag', async (t) => {
   assert.equal(res.status, 422);
 });
 
+test('POST /api/roll/:postId sanitizes a path-traversal banner tag before banking', async (t) => {
+  let bankedBannerTag = null;
+  const downloader = {
+    bank: async (state, args) => {
+      bankedBannerTag = args.bannerTag;
+      return { entry: { post_id: args.post.id }, downloaded: true };
+    },
+  };
+  const base = await bankApp(t, downloader);
+
+  const res = await fetch(`${base}/api/roll/100`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ post: bankPost, banner_tag: '../../etc' }),
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(bankedBannerTag, '______etc');
+});
+
+test('POST /api/roll/:postId stores the sanitized banner tag in metadata', async (t) => {
+  let bankedBannerTag = null;
+  const downloader = {
+    bank: async (state, args) => {
+      bankedBannerTag = args.bannerTag;
+      return { entry: { post_id: args.post.id }, downloaded: true };
+    },
+  };
+  const base = await bankApp(t, downloader);
+
+  const res = await fetch(`${base}/api/roll/100`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ post: bankPost, banner_tag: 'hatsune_miku_(cosplay)' }),
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(bankedBannerTag, 'hatsune_miku__cosplay_');
+});
+
+test('a hostile banner tag cannot write outside the collections directory', async (t) => {
+  const collectionsDir = tempDir();
+  const downloader = new (require('../server/download').Downloader)({
+    collectionsDir,
+    backoffMs: 0,
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new TextEncoder().encode('img').buffer,
+    }),
+  });
+  const base = await startServer(
+    t,
+    createApp({
+      dataDir: tempDir(),
+      collectionsDir,
+      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
+      downloader,
+    }).app,
+  );
+
+  const res = await fetch(`${base}/api/roll/100`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ post: bankPost, banner_tag: '../../etc' }),
+  });
+  assert.equal(res.status, 200);
+
+  assert.equal(fs.existsSync(path.join(collectionsDir, '______etc', '100.jpg')), true);
+  assert.equal(fs.existsSync(path.join(collectionsDir, '..', 'etc', '100.jpg')), false);
+  assert.equal(fs.existsSync(path.join(path.dirname(collectionsDir), 'etc', '100.jpg')), false);
+});
+
 const earnedEntries = [
   { post_id: 1, file_path: 'tag/1.jpg', banner_tag: 'tag' },
   { post_id: 2, file_path: 'tag/2.jpg', banner_tag: 'tag' },

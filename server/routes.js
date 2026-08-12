@@ -3,6 +3,7 @@
 const express = require('express');
 const { removeEarned } = require('./state');
 const economy = require('./economy');
+const { safeTag } = require('./download');
 
 const SAFE_RATING = 'safe';
 
@@ -66,14 +67,15 @@ function createRouter(ctx) {
   router.post('/roll/:postId', async (req, res) => {
     const postId = Number(req.params.postId);
     const post = req.body && req.body.post;
-    const bannerTag = String((req.body && req.body.banner_tag) || '').trim();
+    const rawBannerTag = String((req.body && req.body.banner_tag) || '').trim();
 
     if (!Number.isInteger(postId) || !post || post.id !== postId) {
       return res.status(422).json({ error: 'invalid post' });
     }
-    if (!bannerTag) {
+    if (!rawBannerTag) {
       return res.status(422).json({ error: 'missing banner' });
     }
+    const bannerTag = safeTag(rawBannerTag);
 
     const state = ctx.store.get();
     const result = await ctx.downloader.bank(state, { post, bannerTag });
