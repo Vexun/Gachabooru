@@ -5,8 +5,6 @@ const { removeEarned } = require('./state');
 const economy = require('./economy');
 const { safeTag } = require('./download');
 
-const SAFE_RATING = 'safe';
-
 function createRouter(ctx) {
   const router = express.Router();
   const now = () => (ctx.now ? ctx.now() : Date.now());
@@ -50,7 +48,6 @@ function createRouter(ctx) {
     try {
       const result = await ctx.danbooru.buildRollPool({
         tag,
-        rating: SAFE_RATING,
         earnedIds,
       });
       if (!result.ok) {

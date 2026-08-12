@@ -34,8 +34,8 @@ page or keeping several tabs open does not stop the server. With
 
 ## How to play
 
-The app only shows safe content: general and sensitive rated posts. There
-is no rating setting.
+The app only shows general-rated posts, which Danbooru classifies as
+completely safe for work. There is no rating setting.
 
 1. Search for a tag (character, copyright, or general) and select it as
    your banner.
@@ -80,10 +80,10 @@ same image.
 
 ## Content disclaimer
 
-The app filters to safe-rated posts only. The gallery and rolls still
-reflect the content of the tags you choose. You are responsible for the
-content you browse. Keep this app private and do not share collections
-that contain sensitive material.
+The app filters to general-rated posts only (completely safe for work).
+The gallery and rolls still reflect the content of the tags you choose.
+You are responsible for the content you browse. Keep this app private and
+do not share collections that contain sensitive material.
 
 ## Development
 

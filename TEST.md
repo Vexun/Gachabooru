@@ -93,16 +93,15 @@ Slice 2 builds the 5-image roll pool from the selected banner.
 ### Automated checks
 
 - `npm test` — Slice 2 adds:
-  - `test/danbooru.test.js` — `searchPosts` builds the query (tag, rating
-    filter, `order:score`, limit), maps rating settings to filter tags,
-    filters out non-static formats, and falls back to the original URL
-    when no large image exists. `buildRollPool` draws 5 distinct posts,
-    fetches deeper pages when needed, excludes earned posts, blocks when
-    fewer than 5 eligible posts exist, and blocks when pages run empty.
-  - `test/routes.test.js` — `GET /api/roll/pool` returns 5 posts, always
-    applies the safe rating filter, excludes earned posts, returns 409 on
-    an insufficient pool, 422 on a missing tag, and 502 on upstream
-    failure.
+  - `test/danbooru.test.js` — `searchPosts` builds the query (tag,
+    general-only rating filter, `order:score`, limit), filters out
+    non-static formats, and falls back to the original URL when no large
+    image exists. `buildRollPool` draws 5 distinct posts, fetches deeper
+    pages when needed, excludes earned posts, blocks when fewer than 5
+    eligible posts exist, and blocks when pages run empty.
+  - `test/routes.test.js` — `GET /api/roll/pool` returns 5 posts,
+    excludes earned posts, returns 409 on an insufficient pool, 422 on a
+    missing tag, and 502 on upstream failure.
   - `test/client/roll.test.js` — the roll button stays disabled until a
     banner is chosen, a pool request renders 5 cards, a blocked roll shows
     an error state, a network error is surfaced, and a new roll replaces
@@ -261,16 +260,16 @@ spending a roll on each successful pool request.
 7. Confirm `curl "http://127.0.0.1:3000/api/balance"` matches the UI and
    that an extra roll at balance 0 returns 402.
 
-## Slice 7 — Safe-only filter, docs, final QA
+## Slice 7 — General-only filter, docs, final QA
 
-Slice 7 removes the rating setting. The app always filters to safe-rated
-posts.
+Slice 7 removes the rating setting. The app always filters to general-rated
+posts (completely safe for work).
 
 ### Automated checks
 
 - `npm test` — Slice 7 adds:
-  - `test/routes.test.js` — `GET /api/roll/pool` always applies the safe
-    rating filter.
+  - `test/danbooru.test.js` — the client always applies the general-only
+    filter (`rating:g`).
   - `test/download.test.js` — `safeTag` prevents path traversal in banner
     tags.
   - The rating picker and the `/api/settings` endpoints are removed, with
@@ -283,8 +282,7 @@ posts.
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Confirm there is no rating picker in the UI.
-4. Roll on a large tag and confirm every drawn post is rated general or
-   sensitive.
+4. Roll on a large tag and confirm every drawn post is rated general.
 5. Run the full manual flow: pick a tag, roll, flip, win some, back out,
    open the gallery, delete an image, and watch the balance drain and
    recharge.

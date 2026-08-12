@@ -4,25 +4,13 @@ const DANBOORU_BASE = 'https://danbooru.donmai.us';
 
 const ALLOWED_CATEGORIES = new Set([0, 3, 4]);
 const STATIC_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
+const SAFE_TAGS = ['rating:g'];
 const POSTS_LIMIT = 200;
 const DEFAULT_POOL_SIZE = 5;
 const DEFAULT_MAX_PAGES = 10;
 
 function defaultUserAgent() {
   return 'Gachabooru/0.1 (local personal gacha app)';
-}
-
-function ratingTags(rating) {
-  switch (rating) {
-    case 'safe':
-      return ['-rating:questionable', '-rating:explicit'];
-    case 'soft_safe':
-      return ['rating:safe'];
-    case 'questionable':
-      return ['-rating:explicit'];
-    default:
-      return [];
-  }
 }
 
 class DanbooruError extends Error {
@@ -99,8 +87,8 @@ class DanbooruClient {
   }
 
   async searchPosts(opts = {}) {
-    const { tag, rating, page = 1, limit = POSTS_LIMIT } = opts;
-    const tags = [tag, ...ratingTags(rating), 'order:score'];
+    const { tag, page = 1, limit = POSTS_LIMIT } = opts;
+    const tags = [tag, ...SAFE_TAGS, 'order:score'];
     const data = await this.getJson('/posts.json', {
       tags: tags.join(' '),
       limit,
@@ -134,12 +122,12 @@ function sampleWithoutReplacement(items, size) {
 }
 
 async function buildRollPool(danbooru, opts = {}) {
-  const { tag, rating, earnedIds = [], size = DEFAULT_POOL_SIZE, maxPages = DEFAULT_MAX_PAGES } = opts;
+  const { tag, earnedIds = [], size = DEFAULT_POOL_SIZE, maxPages = DEFAULT_MAX_PAGES } = opts;
   const earned = new Set(earnedIds);
   const eligible = [];
 
   for (let page = 1; page <= maxPages; page++) {
-    const posts = await danbooru.searchPosts({ tag, rating, page });
+    const posts = await danbooru.searchPosts({ tag, page });
     if (posts.length === 0) {
       break;
     }
@@ -163,10 +151,10 @@ module.exports = {
   DANBOORU_BASE,
   ALLOWED_CATEGORIES,
   STATIC_EXTS,
+  SAFE_TAGS,
   POSTS_LIMIT,
   DEFAULT_POOL_SIZE,
   DEFAULT_MAX_PAGES,
-  ratingTags,
   DanbooruError,
   DanbooruClient,
   Throttle,

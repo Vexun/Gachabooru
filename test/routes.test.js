@@ -99,27 +99,6 @@ test('GET /api/roll/pool returns 5 posts', async (t) => {
   assert.equal(data.posts.length, 5);
 });
 
-test('GET /api/roll/pool always applies the safe rating filter', async (t) => {
-  let seenRating = null;
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir: tempDir(),
-      collectionsDir: tempDir(),
-      danbooru: {
-        buildRollPool: async ({ rating }) => {
-          seenRating = rating;
-          return { ok: true, pool: poolPosts };
-        },
-      },
-    }).app,
-  );
-
-  const res = await fetch(`${base}/api/roll/pool?tag=hatsune_miku`);
-  assert.equal(res.status, 200);
-  assert.equal(seenRating, 'safe');
-});
-
 test('GET /api/roll/pool excludes earned posts', async (t) => {
   let seenEarned = null;
   const dataDir = tempDir();

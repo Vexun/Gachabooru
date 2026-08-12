@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { DanbooruClient, DanbooruError, buildRollPool, ratingTags } = require('../server/danbooru');
+const { DanbooruClient, DanbooruError, buildRollPool, SAFE_TAGS } = require('../server/danbooru');
 
 function fakeFetch(jsonOrError) {
   return async () => {
@@ -111,7 +111,7 @@ function rawPost(id, ext = 'jpg') {
   };
 }
 
-test('searchPosts builds the query with tag, rating, order and limit', async () => {
+test('searchPosts builds the query with tag, safe filter, order and limit', async () => {
   let requestedUrl = null;
   const client = new DanbooruClient({
     minIntervalMs: 0,
@@ -121,19 +121,16 @@ test('searchPosts builds the query with tag, rating, order and limit', async () 
     },
   });
 
-  await client.searchPosts({ tag: 'hatsune_miku', rating: 'safe', page: 2, limit: 200 });
+  await client.searchPosts({ tag: 'hatsune_miku', page: 2, limit: 200 });
 
   const params = new URL(requestedUrl).searchParams;
-  assert.equal(params.get('tags'), 'hatsune_miku -rating:questionable -rating:explicit order:score');
+  assert.equal(params.get('tags'), 'hatsune_miku rating:g order:score');
   assert.equal(params.get('page'), '2');
   assert.equal(params.get('limit'), '200');
 });
 
-test('searchPosts maps rating settings to filter tags', () => {
-  assert.deepEqual(ratingTags('safe'), ['-rating:questionable', '-rating:explicit']);
-  assert.deepEqual(ratingTags('soft_safe'), ['rating:safe']);
-  assert.deepEqual(ratingTags('questionable'), ['-rating:explicit']);
-  assert.deepEqual(ratingTags('all'), []);
+test('the client always applies the general-only safe filter', () => {
+  assert.deepEqual(SAFE_TAGS, ['rating:g']);
 });
 
 test('searchPosts filters out non-static formats', async () => {
@@ -155,7 +152,7 @@ test('searchPosts filters out non-static formats', async () => {
     }),
   });
 
-  const posts = await client.searchPosts({ tag: 'x', rating: 'safe' });
+  const posts = await client.searchPosts({ tag: 'x' });
   assert.deepEqual(
     posts.map((p) => p.id),
     [1, 2, 3, 4],
@@ -170,7 +167,7 @@ test('searchPosts falls back to the original file URL when no large image exists
     fetchImpl: async () => ({ ok: true, status: 200, json: async () => [post] }),
   });
 
-  const posts = await client.searchPosts({ tag: 'x', rating: 'safe' });
+  const posts = await client.searchPosts({ tag: 'x' });
   assert.equal(posts[0].large_file_url, post.file_url);
 });
 
@@ -180,7 +177,7 @@ test('buildRollPool draws 5 distinct posts from a full pool', async () => {
     searchPosts: async () => posts,
   };
 
-  const result = await buildRollPool(fakeDanbooru, { tag: 'x', rating: 'safe' });
+  const result = await buildRollPool(fakeDanbooru, { tag: 'x' });
   assert.equal(result.ok, true);
   assert.equal(result.pool.length, 5);
   const ids = new Set(result.pool.map((p) => p.id));
@@ -199,7 +196,7 @@ test('buildRollPool fetches deeper pages until 5 eligible posts exist', async ()
     },
   };
 
-  const result = await buildRollPool(fakeDanbooru, { tag: 'x', rating: 'safe' });
+  const result = await buildRollPool(fakeDanbooru, { tag: 'x' });
   assert.equal(result.ok, true);
   assert.equal(result.pool.length, 5);
   assert.ok(pageCalls >= 2);
@@ -214,7 +211,6 @@ test('buildRollPool excludes earned posts', async () => {
 
   const result = await buildRollPool(fakeDanbooru, {
     tag: 'x',
-    rating: 'safe',
     earnedIds: earned,
   });
   const ids = result.pool.map((p) => p.id);
@@ -233,7 +229,7 @@ test('buildRollPool blocks when fewer than 5 eligible posts exist', async () => 
     },
   };
 
-  const result = await buildRollPool(fakeDanbooru, { tag: 'x', rating: 'safe' });
+  const result = await buildRollPool(fakeDanbooru, { tag: 'x' });
   assert.deepEqual(result, { ok: false, reason: 'insufficient' });
 });
 
@@ -246,6 +242,6 @@ test('buildRollPool blocks when deeper pages run empty', async () => {
     },
   };
 
-  const result = await buildRollPool(fakeDanbooru, { tag: 'x', rating: 'safe' });
+  const result = await buildRollPool(fakeDanbooru, { tag: 'x' });
   assert.equal(result.ok, false);
 });
