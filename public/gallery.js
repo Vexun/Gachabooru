@@ -24,10 +24,22 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   detail.className = 'gallery-detail';
   detail.hidden = true;
 
+  const prevBtn = document.createElement('button');
+  prevBtn.type = 'button';
+  prevBtn.className = 'gallery-nav gallery-prev';
+  prevBtn.textContent = '\u2039';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'gallery-nav gallery-next';
+  nextBtn.textContent = '\u203a';
+
   const detailImg = document.createElement('img');
   detailImg.className = 'gallery-detail-img';
   const detailMeta = document.createElement('div');
   detailMeta.className = 'gallery-detail-meta';
+  const detailCounter = document.createElement('div');
+  detailCounter.className = 'gallery-counter';
   const postLink = document.createElement('a');
   postLink.className = 'gallery-post-link';
   postLink.textContent = 'View on Danbooru';
@@ -43,7 +55,16 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   closeBtn.className = 'gallery-close';
   closeBtn.textContent = 'Close';
 
-  detail.append(detailImg, detailMeta, postLink, deleteBtn, closeBtn);
+  detail.append(
+    prevBtn,
+    detailImg,
+    detailMeta,
+    detailCounter,
+    postLink,
+    deleteBtn,
+    closeBtn,
+    nextBtn,
+  );
   root.append(heading, grid, emptyEl, loadMoreBtn, detail);
 
   let items = [];
@@ -51,6 +72,7 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   let total = 0;
   let loading = false;
   let detailItem = null;
+  let detailIndex = -1;
   let confirmArmed = false;
 
   function srcFor(item) {
@@ -80,7 +102,15 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     updateLoadMore();
   }
 
-  function openDetail(item) {
+  function hasMore() {
+    return page * pageSize < total;
+  }
+
+  function renderDetail() {
+    const item = items[detailIndex];
+    if (!item) {
+      return;
+    }
     detailItem = item;
     confirmArmed = false;
     deleteBtn.textContent = 'Delete';
@@ -89,12 +119,50 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     detailMeta.textContent = `${item.banner_tag} — earned ${new Date(
       item.earned_at,
     ).toLocaleString()}`;
+    detailCounter.textContent = `${detailIndex + 1} of ${total}`;
     postLink.href = item.danbooru_url || '#';
+    prevBtn.disabled = detailIndex <= 0;
+    nextBtn.disabled = detailIndex >= items.length - 1 && !hasMore();
+  }
+
+  function openDetail(item) {
+    detailIndex = items.findIndex((entry) => entry.post_id === item.post_id);
+    if (detailIndex === -1) {
+      detailIndex = items.length > 0 ? 0 : -1;
+    }
+    renderDetail();
     detail.hidden = false;
+  }
+
+  function goPrev() {
+    if (detailIndex <= 0 || detail.hidden) {
+      return;
+    }
+    detailIndex -= 1;
+    renderDetail();
+  }
+
+  async function goNext() {
+    if (detail.hidden || detailIndex < 0) {
+      return;
+    }
+    if (detailIndex >= items.length - 1) {
+      if (hasMore()) {
+        await loadMore();
+        if (detailIndex < items.length - 1) {
+          detailIndex += 1;
+          renderDetail();
+        }
+      }
+      return;
+    }
+    detailIndex += 1;
+    renderDetail();
   }
 
   function closeDetail() {
     detailItem = null;
+    detailIndex = -1;
     confirmArmed = false;
     detail.hidden = true;
   }
@@ -176,8 +244,31 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   });
 
   closeBtn.addEventListener('click', closeDetail);
+  prevBtn.addEventListener('click', goPrev);
+  nextBtn.addEventListener('click', () => {
+    goNext();
+  });
   loadMoreBtn.addEventListener('click', () => {
     loadMore();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (detail.hidden) {
+      return;
+    }
+    if (event.key === 'ArrowLeft') {
+      goPrev();
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+    } else if (event.key === 'ArrowRight') {
+      goNext();
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+    } else if (event.key === 'Escape') {
+      closeDetail();
+    }
   });
 
   return {
@@ -187,9 +278,12 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     render,
     openDetail,
     closeDetail,
+    goPrev,
+    goNext,
     removeItem,
     getItems: () => items,
     getDetail: () => (detailItem ? { ...detailItem } : null),
+    getDetailIndex: () => detailIndex,
     isDetailOpen: () => !detail.hidden,
   };
 }

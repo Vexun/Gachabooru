@@ -226,16 +226,21 @@ Slice 5 shows the earned collection and supports deletion.
    the earned images appear.
 5. Click an image and confirm the full-size view opens with a link to the
    Danbooru post.
-6. Click Delete, confirm the confirmation prompt, and confirm the image
+6. Use the arrow buttons on the sides of the screen (or the Left and Right
+   arrow keys) to move between images. Confirm the position counter
+   updates, deeper pages load as you reach the end, and navigation stops
+   at the newest and oldest images.
+7. Press Escape (or click Close) to leave the full-size view.
+8. Click Delete, confirm the confirmation prompt, and confirm the image
    disappears from the grid.
-7. Confirm the deleted image becomes eligible again by rolling: it can
+9. Confirm the deleted image becomes eligible again by rolling: it can
    appear in a new roll pool.
-8. Confirm `curl "http://127.0.0.1:3000/api/earned"` lists the remaining
-   images newest first and `curl -X DELETE .../api/earned/<id>` removes
-   one.
-9. Bank more than 30 images and confirm the Collection shows the newest
-   ones first with a "Load more" button that appends the rest.
-10. Confirm pagination works via the API:
+10. Confirm `curl "http://127.0.0.1:3000/api/earned"` lists the remaining
+    images newest first and `curl -X DELETE .../api/earned/<id>` removes
+    one.
+11. Bank more than 30 images and confirm the Collection shows the newest
+    ones first with a "Load more" button that appends the rest.
+12. Confirm pagination works via the API:
     `curl "http://127.0.0.1:3000/api/earned?limit=2&page=2"` returns the
     next slice with `page`, `limit`, and `total` fields, and
     `?limit=0` returns 422.

@@ -316,6 +316,43 @@ main {
   font-size: 0.9rem;
 }
 
+.gallery-counter {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  font-size: 3rem;
+  line-height: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: rgba(36, 36, 52, 0.6);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.gallery-nav:hover {
+  background: rgba(36, 36, 52, 0.95);
+}
+
+.gallery-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.gallery-prev {
+  left: 0.5rem;
+}
+
+.gallery-next {
+  right: 0.5rem;
+}
+
 .gallery-post-link {
   color: var(--accent);
 }

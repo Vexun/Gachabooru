@@ -161,3 +161,89 @@ test('closing the detail view hides it without deleting', async (t) => {
   assert.equal(gallery.isDetailOpen(), false);
   assert.equal(gallery.getItems().length, 2);
 });
+
+test('prev and next buttons move through the images', async (t) => {
+  const all = [1, 2].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  gallery.openDetail(all[0]);
+
+  gallery.el.querySelector('.gallery-next').click();
+  assert.equal(gallery.getDetailIndex(), 1);
+  assert.equal(gallery.getDetail().post_id, 2);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '2 of 2');
+
+  gallery.el.querySelector('.gallery-prev').click();
+  assert.equal(gallery.getDetailIndex(), 0);
+  assert.equal(gallery.getDetail().post_id, 1);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '1 of 2');
+});
+
+test('arrow keys navigate and Escape closes the detail view', async (t) => {
+  const all = [1, 2].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery, doc } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  gallery.openDetail(all[0]);
+  assert.equal(gallery.isDetailOpen(), true);
+
+  doc.dispatchEvent({ type: 'keydown', key: 'ArrowRight' });
+  assert.equal(gallery.getDetailIndex(), 1);
+
+  doc.dispatchEvent({ type: 'keydown', key: 'ArrowLeft' });
+  assert.equal(gallery.getDetailIndex(), 0);
+
+  doc.dispatchEvent({ type: 'keydown', key: 'Escape' });
+  assert.equal(gallery.isDetailOpen(), false);
+
+  doc.dispatchEvent({ type: 'keydown', key: 'ArrowRight' });
+  assert.equal(gallery.getDetailIndex(), -1);
+});
+
+test('next at the end of a page loads more and continues', async (t) => {
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  gallery.openDetail(all[0]);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '1 of 4');
+
+  await gallery.goNext();
+  assert.equal(gallery.getDetailIndex(), 1);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '2 of 4');
+
+  await gallery.goNext();
+  assert.equal(gallery.getDetailIndex(), 2);
+  assert.equal(gallery.getDetail().post_id, 3);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '3 of 4');
+
+  await gallery.goNext();
+  assert.equal(gallery.getDetailIndex(), 3);
+  assert.equal(gallery.getDetail().post_id, 4);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '4 of 4');
+});
+
+test('prev is disabled at the first image', async (t) => {
+  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+  await gallery.load();
+
+  gallery.openDetail(twoEntries[0]);
+  const prevBtn = gallery.el.querySelector('.gallery-prev');
+  assert.equal(prevBtn.disabled, true);
+
+  await gallery.goPrev();
+  assert.equal(gallery.getDetailIndex(), 0);
+});
+
+test('next is disabled at the last image when everything is loaded', async (t) => {
+  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+  await gallery.load();
+
+  gallery.openDetail(twoEntries[1]);
+  const nextBtn = gallery.el.querySelector('.gallery-next');
+  assert.equal(nextBtn.disabled, true);
+
+  await gallery.goNext();
+  assert.equal(gallery.getDetailIndex(), 1);
+});
