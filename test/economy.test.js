@@ -18,56 +18,56 @@ function makeState(balance, lastAccrualAt) {
 }
 
 test('exposes economy constants', () => {
-  assert.equal(ACCRUAL_PER_HOUR, 2);
-  assert.equal(CAP, 30);
-  assert.equal(DAILY_BONUS, 5);
-  assert.equal(FIRST_OPEN_BONUS, 10);
+  assert.equal(ACCRUAL_PER_HOUR, 10);
+  assert.equal(CAP, 300);
+  assert.equal(DAILY_BONUS, 20);
+  assert.equal(FIRST_OPEN_BONUS, 50);
 });
 
-test('accrues 2 rolls per whole hour', () => {
+test('accrues 10 rolls per whole hour', () => {
   const state = makeState(0, 0);
-  assert.equal(economy.getBalance(state, HOUR_MS), 2);
-  assert.equal(economy.getBalance(state, 2 * HOUR_MS), 2 + 2);
-  assert.equal(economy.getBalance(state, 3 * HOUR_MS), 6);
+  assert.equal(economy.getBalance(state, HOUR_MS), 10);
+  assert.equal(economy.getBalance(state, 2 * HOUR_MS), 20);
+  assert.equal(economy.getBalance(state, 3 * HOUR_MS), 30);
 });
 
 test('floors to whole hours elapsed', () => {
   const state = makeState(0, 0);
-  assert.equal(economy.getBalance(state, 1.5 * HOUR_MS), 2);
+  assert.equal(economy.getBalance(state, 1.5 * HOUR_MS), 10);
 });
 
-test('caps the balance at 30 from accrual', () => {
+test('caps the balance at 300 from accrual', () => {
   const state = makeState(0, 0);
-  assert.equal(economy.getBalance(state, 20 * HOUR_MS), 30);
+  assert.equal(economy.getBalance(state, 40 * HOUR_MS), 300);
 });
 
 test('does not reduce a balance already above the cap', () => {
-  const state = makeState(35, 0);
-  assert.equal(economy.getBalance(state, 10 * HOUR_MS), 35);
+  const state = makeState(350, 0);
+  assert.equal(economy.getBalance(state, 10 * HOUR_MS), 350);
 });
 
-test('grants the 24-hour bonus only when below 30 at the boundary', () => {
+test('grants the 24-hour bonus only when below 300 at the boundary', () => {
   const last = DAY_MS + 23 * HOUR_MS;
   const now = 2 * DAY_MS + 1 * HOUR_MS;
   const state = makeState(20, last);
 
-  assert.equal(economy.getBalance(state, now), 20 + 4 + DAILY_BONUS);
+  assert.equal(economy.getBalance(state, now), 20 + 20 + DAILY_BONUS);
 });
 
 test('does not grant the 24-hour bonus while at the cap', () => {
   const last = DAY_MS + 23 * HOUR_MS;
   const now = 2 * DAY_MS + 1 * HOUR_MS;
-  const state = makeState(30, last);
+  const state = makeState(300, last);
 
-  assert.equal(economy.getBalance(state, now), 30);
+  assert.equal(economy.getBalance(state, now), 300);
 });
 
 test('does not grant the 24-hour bonus while above the cap', () => {
   const last = DAY_MS + 23 * HOUR_MS;
   const now = 2 * DAY_MS + 1 * HOUR_MS;
-  const state = makeState(35, last);
+  const state = makeState(350, last);
 
-  assert.equal(economy.getBalance(state, now), 35);
+  assert.equal(economy.getBalance(state, now), 350);
 });
 
 test('does not stack the 24-hour bonus across crossed boundaries at the cap', () => {
@@ -75,16 +75,16 @@ test('does not stack the 24-hour bonus across crossed boundaries at the cap', ()
   const now = 4 * DAY_MS + 1 * HOUR_MS;
   const state = makeState(20, last);
 
-  assert.equal(economy.getBalance(state, now), 30);
+  assert.equal(economy.getBalance(state, now), 300);
 });
 
-test('first-open bonus grants +10 once', () => {
+test('first-open bonus grants +50 once', () => {
   const state = { balance: 0, first_open_bonus_claimed: false };
 
   assert.equal(economy.claimFirstOpenBonus(state), true);
-  assert.equal(state.balance, 10);
+  assert.equal(state.balance, 50);
   assert.equal(economy.claimFirstOpenBonus(state), false);
-  assert.equal(state.balance, 10);
+  assert.equal(state.balance, 50);
 });
 
 test('balance never goes below zero on spend', () => {

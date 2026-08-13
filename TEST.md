@@ -46,7 +46,7 @@ client page, and the server-side state module.
 4. Confirm the status text in the header changes to "online".
 5. Confirm `curl http://127.0.0.1:3000/api/health` returns `{"ok":true}`.
 6. Confirm `data/state.json` exists after first launch and contains a
-   balance of 10 (first-open bonus) and `first_open_bonus_claimed: true`.
+   balance of 50 (first-open bonus) and `first_open_bonus_claimed: true`.
 7. Confirm `data/state.json.bak` is created after the first save.
 8. Stop the app, replace `data/state.json` with garbage, and start again.
    Confirm the app boots, recovers the previous state, and leaves a
@@ -137,11 +137,16 @@ identical numbered backs.
 ### Automated checks
 
 - `npm test` — Slice 3 adds to `test/client/roll.test.js`:
-  - A roll enters the peek state and shows 5 images.
+  - A roll enters the peek state and shows 5 images (served through the
+    image proxy).
   - The cover fires after the 3-second timer (fake timers).
   - Covered cards show identical `.card-back` elements, numbered 1 to 5.
   - A new roll clears the cover state and restarts the peek.
   - `cancelCover` clears the pending peek timer.
+  - `test/routes.test.js` — `GET /api/image` proxies images from
+    `cdn.donmai.us`, rejects URLs outside the allowlist with 400, and
+    returns 502 on upstream failure. `test/download.test.js` covers
+    `fetchBuffer`.
 - `npm run lint` — clean output.
 
 ### Manual smoke
@@ -149,7 +154,9 @@ identical numbered backs.
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Pick a tag and click Roll.
-4. Confirm all 5 images are visible face-up for 3 seconds.
+4. Confirm all 5 images are visible face-up for 3 seconds (loaded through
+   the app's image proxy, so they load even if the CDN would reject a
+   direct browser request).
 5. Confirm the images then disappear and are replaced by identical
    striped card backs numbered 1 to 5.
 6. Roll again and confirm the peek/cover cycle repeats.
@@ -261,12 +268,12 @@ spending a roll on each successful pool request.
 ### Automated checks
 
 - `npm test` — Slice 6 adds:
-  - `test/economy.test.js` — 2 rolls per whole hour, whole-hour flooring,
-    the accrual cap at 30 (without reducing an existing balance above the
-    cap), the 24-hour bonus only when below 30 at a boundary, no bonus
-    while at or above the cap, no bonus stacking across boundaries at the
-    cap, the first-open +10 once, the balance floor at 0, and clock-skew
-    handling.
+  - `test/economy.test.js` — 10 rolls per whole hour, whole-hour
+    flooring, the accrual cap at 300 (without reducing an existing
+    balance above the cap), the 24-hour bonus only when below 300 at a
+    boundary, no bonus while at or above the cap, no bonus stacking
+    across boundaries at the cap, the first-open +50 once, the balance
+    floor at 0, and clock-skew handling.
   - `test/routes.test.js` — `GET /api/balance` returns the balance, a
     successful pool request deducts one roll, a pool request is blocked
     with 402 on an insufficient balance (without calling upstream), and a
@@ -281,7 +288,7 @@ spending a roll on each successful pool request.
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
-3. Confirm the header shows "Rolls: 10" on first launch.
+3. Confirm the header shows "Rolls: 50" on first launch.
 4. Roll and confirm the count drops by 1 each time.
 5. Confirm the Roll button disables when the balance reaches 0.
 6. To check recharge quickly, temporarily lower the accrual constants in

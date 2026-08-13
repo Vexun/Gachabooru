@@ -2,10 +2,10 @@
 
 const HOUR_MS = 3600 * 1000;
 const DAY_MS = 24 * HOUR_MS;
-const ACCRUAL_PER_HOUR = 2;
-const CAP = 30;
-const DAILY_BONUS = 5;
-const FIRST_OPEN_BONUS = 10;
+const ACCRUAL_PER_HOUR = 10;
+const CAP = 300;
+const DAILY_BONUS = 20;
+const FIRST_OPEN_BONUS = 50;
 
 function claimFirstOpenBonus(state) {
   if (state.first_open_bonus_claimed) {

@@ -76,7 +76,7 @@ test('requesting a pool renders 5 cards in peek state', async (t) => {
   const cards = roll.el.querySelectorAll('.card');
   assert.equal(cards.length, 5);
   assert.equal(cards[0].dataset.postId, '1');
-  assert.equal(cards[0].querySelector('img').src, 'https://cdn.donmai.us/1.jpg');
+  assert.equal(cards[0].querySelector('img').src, `/api/image?url=${encodeURIComponent('https://cdn.donmai.us/1.jpg')}`);
   assert.equal(cards[0].querySelector('img').hidden, false);
   assert.equal(timers.pending()[0], 3000);
 });

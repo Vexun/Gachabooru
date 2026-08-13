@@ -49,10 +49,10 @@ completely safe for work. There is no rating setting.
 
 ## Economy
 
-- First launch grants a one-time bonus of 10 rolls.
-- The balance accrues 2 rolls per whole hour, capped at 30.
-- At each 24-hour boundary, if the balance is below 30, grant 5 more
-  rolls (up to 35).
+- First launch grants a one-time bonus of 50 rolls.
+- The balance accrues 10 rolls per whole hour, capped at 300.
+- At each 24-hour boundary, if the balance is below 300, grant 20 more
+  rolls (up to 320).
 - Balance never drops below 0.
 
 ## Collection

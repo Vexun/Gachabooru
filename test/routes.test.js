@@ -230,6 +230,50 @@ const bankPost = {
   tag_string: 'hatsune_miku',
 };
 
+test('GET /api/image streams a proxied image', async (t) => {
+  const downloader = {
+    fetchBuffer: async (url) => {
+      assert.equal(url, 'https://cdn.donmai.us/sample/abc.jpg');
+      return Buffer.from('imgbytes');
+    },
+  };
+  const base = await bankApp(t, downloader);
+
+  const res = await fetch(`${base}/api/image?url=${encodeURIComponent('https://cdn.donmai.us/sample/abc.jpg')}`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/*');
+  assert.equal(await res.text(), 'imgbytes');
+});
+
+test('GET /api/image rejects URLs outside the CDN allowlist', async (t) => {
+  const downloader = { fetchBuffer: async () => Buffer.from('x') };
+  const base = await bankApp(t, downloader);
+
+  for (const url of [
+    'http://cdn.donmai.us/evil.jpg',
+    'https://evil.example.com/x.jpg',
+    'file:///etc/passwd',
+    'not a url',
+  ]) {
+    const res = await fetch(`${base}/api/image?url=${encodeURIComponent(url)}`);
+    assert.equal(res.status, 400, `expected 400 for ${url}`);
+  }
+});
+
+test('GET /api/image returns 502 when the upstream fetch fails', async (t) => {
+  const downloader = {
+    fetchBuffer: async () => {
+      throw new Error('boom');
+    },
+  };
+  const base = await bankApp(t, downloader);
+
+  const res = await fetch(`${base}/api/image?url=${encodeURIComponent('https://cdn.donmai.us/x.jpg')}`);
+  assert.equal(res.status, 502);
+  const data = await res.json();
+  assert.equal(data.error, 'image fetch failed');
+});
+
 test('POST /api/roll/:postId banks the image and triggers a download', async (t) => {
   let banked = null;
   const downloader = {
@@ -560,7 +604,7 @@ test('GET /api/balance returns the current balance', async (t) => {
   const res = await fetch(`${base}/api/balance`);
   assert.equal(res.status, 200);
   const data = await res.json();
-  assert.equal(data.balance, 10);
+  assert.equal(data.balance, 50);
 });
 
 test('pool request deducts one roll on success', async (t) => {
@@ -571,11 +615,11 @@ test('pool request deducts one roll on success', async (t) => {
   const res = await fetch(`${base}/api/roll/pool?tag=hatsune_miku`);
   const data = await res.json();
   assert.equal(res.status, 200);
-  assert.equal(data.balance, 9);
+  assert.equal(data.balance, 49);
   assert.equal(data.posts.length, 5);
 
   const bal = await (await fetch(`${base}/api/balance`)).json();
-  assert.equal(bal.balance, 9);
+  assert.equal(bal.balance, 49);
 });
 
 test('pool request is blocked with 402 on insufficient balance', async (t) => {
@@ -619,5 +663,5 @@ test('a blocked pool does not consume a roll', async (t) => {
   assert.equal(res.status, 409);
 
   const bal = await (await fetch(`${base}/api/balance`)).json();
-  assert.equal(bal.balance, 10);
+  assert.equal(bal.balance, 50);
 });

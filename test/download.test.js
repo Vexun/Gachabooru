@@ -130,6 +130,26 @@ test('bank is idempotent per post', async () => {
   assert.equal(downloads, 1);
 });
 
+test('fetchBuffer returns the bytes and retries on failure', async () => {
+  let attempts = 0;
+  const downloader = new Downloader({
+    collectionsDir: tempDir(),
+    backoffMs: 0,
+    retries: 2,
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return { ok: false, status: 403 };
+      }
+      return { ok: true, status: 200, arrayBuffer: async () => arrayBufferOf('proxied') };
+    },
+  });
+
+  const buffer = await downloader.fetchBuffer('https://cdn.donmai.us/x.jpg');
+  assert.equal(buffer.toString('utf8'), 'proxied');
+  assert.ok(attempts >= 2);
+});
+
 test('bank retries a missing file for an already-earned post', async () => {
   const dir = tempDir();
   let downloads = 0;

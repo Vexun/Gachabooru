@@ -7,6 +7,7 @@ const { safeTag } = require('./download');
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 200;
+const ALLOWED_IMAGE_HOSTS = new Set(['cdn.donmai.us']);
 
 function parsePagination(query) {
   const page = query.page === undefined ? 1 : Number(query.page);
@@ -42,6 +43,26 @@ function createRouter(ctx) {
     const balance = economy.getBalance(state, now());
     ctx.store.save();
     res.json({ balance });
+  });
+
+  router.get('/image', async (req, res) => {
+    const rawUrl = String(req.query.url || '');
+    let parsed;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      return res.status(400).json({ error: 'invalid image url' });
+    }
+    if (parsed.protocol !== 'https:' || !ALLOWED_IMAGE_HOSTS.has(parsed.host)) {
+      return res.status(400).json({ error: 'invalid image url' });
+    }
+    try {
+      const buffer = await ctx.downloader.fetchBuffer(parsed.href);
+      res.setHeader('Content-Type', 'image/*');
+      res.send(buffer);
+    } catch (err) {
+      res.status(502).json({ error: 'image fetch failed', detail: err.message });
+    }
   });
 
   router.get('/autocomplete', async (req, res) => {

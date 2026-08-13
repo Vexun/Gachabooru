@@ -47,7 +47,7 @@ class Downloader {
     return path.join(safeTag(bannerTag), `${post.id}.${safeExt(post.file_ext)}`);
   }
 
-  async fetchFile(url, destPath) {
+  async fetchBuffer(url) {
     let lastErr;
     for (let attempt = 0; attempt <= this.retries; attempt++) {
       try {
@@ -55,10 +55,7 @@ class Downloader {
         if (!res.ok) {
           throw new DownloadError(`HTTP ${res.status}`);
         }
-        const buffer = Buffer.from(await res.arrayBuffer());
-        fs.mkdirSync(path.dirname(destPath), { recursive: true });
-        fs.writeFileSync(destPath, buffer);
-        return destPath;
+        return Buffer.from(await res.arrayBuffer());
       } catch (err) {
         lastErr = err;
         if (attempt < this.retries) {
@@ -67,6 +64,13 @@ class Downloader {
       }
     }
     throw lastErr;
+  }
+
+  async fetchFile(url, destPath) {
+    const buffer = await this.fetchBuffer(url);
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    fs.writeFileSync(destPath, buffer);
+    return destPath;
   }
 
   removeQueued(state, postId) {

@@ -9,6 +9,10 @@ function shuffleIndices(n, random) {
   return arr;
 }
 
+function imgSrc(url) {
+  return `/api/image?url=${encodeURIComponent(url)}`;
+}
+
 function createRoll({
   document,
   fetch: fetchImpl,
@@ -120,7 +124,7 @@ function createRoll({
       card.dataset.postId = String(post.id);
       card.dataset.position = String(idx + 1);
       const img = document.createElement('img');
-      img.src = post.large_file_url || post.preview_file_url || post.file_url;
+      img.src = imgSrc(post.large_file_url || post.preview_file_url || post.file_url);
       img.alt = `post ${post.id}`;
       card.append(img);
       grid.append(card);
@@ -276,7 +280,7 @@ function createRoll({
         const card = document.createElement('figure');
         card.className = 'card';
         const img = document.createElement('img');
-        img.src = post.large_file_url || post.file_url;
+        img.src = imgSrc(post.large_file_url || post.file_url);
         img.alt = `post ${post.id}`;
         card.append(img);
         resultGrid.append(card);
