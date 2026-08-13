@@ -9,6 +9,7 @@ const { StateStore } = require('./state');
 const { createRouter } = require('./routes');
 const { DanbooruClient } = require('./danbooru');
 const { Downloader } = require('./download');
+const { securityHeaders } = require('./security');
 
 const HOST = '127.0.0.1';
 const DEFAULT_PORT = 3000;
@@ -28,6 +29,7 @@ function createApp(opts = {}) {
   }
 
   const app = express();
+  app.use(securityHeaders());
   app.use(express.json());
   app.use(express.static(path.join(__dirname, '..', 'public')));
   app.use('/collections', express.static(collectionsDir));

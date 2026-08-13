@@ -294,6 +294,10 @@ posts (completely safe for work).
     filter (`rating:g`).
   - `test/download.test.js` — `safeTag` prevents path traversal in banner
     tags.
+  - `test/routes.test.js` — responses include a restrictive
+    Content-Security-Policy (default-src none, self-only scripts and
+    styles, images from `cdn.donmai.us`, same-origin websocket) and the
+    `nosniff` / `no-referrer` companion headers.
   - The rating picker and the `/api/settings` endpoints are removed, with
     their tests.
 - `npm run lint` — clean output.
@@ -305,10 +309,16 @@ posts (completely safe for work).
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Confirm there is no rating picker in the UI.
 4. Roll on a large tag and confirm every drawn post is rated general.
-5. Run the full manual flow: pick a tag, roll, flip, win some, back out,
+5. Confirm `curl -sI "http://127.0.0.1:3000/"` shows a
+   `Content-Security-Policy` header whose `connect-src` includes the
+   same-origin websocket, plus `X-Content-Type-Options: nosniff` and
+   `Referrer-Policy: no-referrer`.
+6. Confirm the peek images load (they come from `cdn.donmai.us`, allowed
+   by `img-src`).
+7. Run the full manual flow: pick a tag, roll, flip, win some, back out,
    open the Collection page, delete an image, and watch the balance drain
    and recharge.
-6. Confirm `curl "http://127.0.0.1:3000/api/settings"` returns 404 (the
+8. Confirm `curl "http://127.0.0.1:3000/api/settings"` returns 404 (the
    settings endpoint is gone).
 
 ## Launcher — close-from-browser shutdown

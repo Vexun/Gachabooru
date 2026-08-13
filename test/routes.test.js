@@ -28,6 +28,32 @@ test('serves the static client page', async (t) => {
   assert.match(html, /Gachabooru/);
 });
 
+test('responses include a restrictive Content-Security-Policy', async (t) => {
+  const app = createApp({ dataDir: tempDir(), collectionsDir: tempDir() }).app;
+  const base = await startServer(t, app);
+
+  const res = await fetch(`${base}/`);
+  const csp = res.headers.get('content-security-policy');
+  assert.ok(csp, 'CSP header present');
+  assert.match(csp, /default-src 'none'/);
+  assert.match(csp, /script-src 'self'/);
+  assert.match(csp, /style-src 'self'/);
+  assert.match(csp, /img-src 'self' https:\/\/cdn\.donmai\.us/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /connect-src 'self' ws:\/\/127\.0\.0\.1:\d+/);
+  assert.doesNotMatch(csp, /upgrade-insecure-requests/);
+});
+
+test('responses include security companion headers', async (t) => {
+  const app = createApp({ dataDir: tempDir(), collectionsDir: tempDir() }).app;
+  const base = await startServer(t, app);
+
+  const res = await fetch(`${base}/api/health`);
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(res.headers.get('referrer-policy'), 'no-referrer');
+});
+
 function makeApp(t, overrides) {
   const app = createApp({
     dataDir: tempDir(),

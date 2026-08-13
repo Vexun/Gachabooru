@@ -80,6 +80,14 @@ per second to respect rate limits. Image downloads may be challenged by
 the CDN; failed downloads are queued and retried on the next bank of the
 same image.
 
+## Security
+
+Responses include a Content-Security-Policy that allows only the app's
+own scripts and styles, local images, and images from `cdn.donmai.us`,
+plus the same-origin API and close-detection WebSocket. Companion headers
+(`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`) are
+set too. The app binds to localhost only, so this is defense in depth.
+
 ## Content disclaimer
 
 The app filters to general-rated posts only (completely safe for work).
