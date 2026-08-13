@@ -86,7 +86,9 @@ Responses include a Content-Security-Policy that allows only the app's
 own scripts and styles, local images, and images from `cdn.donmai.us`,
 plus the same-origin API and close-detection WebSocket. Companion headers
 (`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`) are
-set too. The app binds to localhost only, so this is defense in depth.
+set too. The API is rate-limited to 120 requests per 10 seconds
+(`/api/health` is exempt); a limit breach returns 429. The app binds to
+localhost only, so this is defense in depth.
 
 ## Content disclaimer
 

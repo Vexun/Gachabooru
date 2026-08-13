@@ -297,7 +297,11 @@ posts (completely safe for work).
   - `test/routes.test.js` — responses include a restrictive
     Content-Security-Policy (default-src none, self-only scripts and
     styles, images from `cdn.donmai.us`, same-origin websocket) and the
-    `nosniff` / `no-referrer` companion headers.
+    `nosniff` / `no-referrer` companion headers. The API rate limiter
+    returns 429 over the limit and exempts `/api/health`.
+  - `test/rate-limit.test.js` — the limiter passes requests under the
+    limit, returns 429 with Retry-After over it, resets when the window
+    expires, and never blocks exempt paths.
   - The rating picker and the `/api/settings` endpoints are removed, with
     their tests.
 - `npm run lint` — clean output.
@@ -315,10 +319,14 @@ posts (completely safe for work).
    `Referrer-Policy: no-referrer`.
 6. Confirm the peek images load (they come from `cdn.donmai.us`, allowed
    by `img-src`).
-7. Run the full manual flow: pick a tag, roll, flip, win some, back out,
+7. Confirm the API rate limit by firing many quick requests, for example
+   `for i in $(seq 1 130); do curl -s -o /dev/null "http://127.0.0.1:3000/api/balance"; done`
+   — the last requests return 429 with a `Retry-After` header, while
+   `curl "http://127.0.0.1:3000/api/health"` keeps returning 200.
+8. Run the full manual flow: pick a tag, roll, flip, win some, back out,
    open the Collection page, delete an image, and watch the balance drain
    and recharge.
-8. Confirm `curl "http://127.0.0.1:3000/api/settings"` returns 404 (the
+9. Confirm `curl "http://127.0.0.1:3000/api/settings"` returns 404 (the
    settings endpoint is gone).
 
 ## Launcher — close-from-browser shutdown

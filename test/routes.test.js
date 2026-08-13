@@ -54,6 +54,39 @@ test('responses include security companion headers', async (t) => {
   assert.equal(res.headers.get('referrer-policy'), 'no-referrer');
 });
 
+test('the API rate limiter returns 429 over the limit', async (t) => {
+  const app = createApp({
+    dataDir: tempDir(),
+    collectionsDir: tempDir(),
+    rateLimit: { windowMs: 1000, max: 3 },
+  }).app;
+  const base = await startServer(t, app);
+
+  for (let i = 0; i < 3; i++) {
+    const res = await fetch(`${base}/api/balance`);
+    assert.equal(res.status, 200);
+  }
+  const blocked = await fetch(`${base}/api/balance`);
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get('retry-after')) >= 1);
+  const data = await blocked.json();
+  assert.equal(data.error, 'rate limit exceeded');
+});
+
+test('the API rate limiter exempts the health endpoint', async (t) => {
+  const app = createApp({
+    dataDir: tempDir(),
+    collectionsDir: tempDir(),
+    rateLimit: { windowMs: 1000, max: 2 },
+  }).app;
+  const base = await startServer(t, app);
+
+  for (let i = 0; i < 5; i++) {
+    const res = await fetch(`${base}/api/health`);
+    assert.equal(res.status, 200);
+  }
+});
+
 function makeApp(t, overrides) {
   const app = createApp({
     dataDir: tempDir(),
