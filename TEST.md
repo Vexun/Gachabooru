@@ -26,7 +26,11 @@ client page, and the server-side state module.
 
 - `npm test` — the full suite. Slice 0 covers:
   - `test/state.test.js` — default state creation, persistence and
-    reload, atomic save.
+    reload, atomic save, backup written on save, recovery from the backup
+    on corruption, fresh start when no backup exists (corrupt file
+    preserved), recovery of a deleted state file, rollback on
+    structurally-invalid JSON, refusal to write invalid state, and a
+    successful app boot with a corrupt state file.
   - `test/economy.test.js` — first-open bonus grants +10 exactly once.
   - `test/routes.test.js` — `GET /api/health` returns 200; the static
     client page is served.
@@ -43,7 +47,11 @@ client page, and the server-side state module.
 5. Confirm `curl http://127.0.0.1:3000/api/health` returns `{"ok":true}`.
 6. Confirm `data/state.json` exists after first launch and contains a
    balance of 10 (first-open bonus) and `first_open_bonus_claimed: true`.
-7. Confirm `collections/` exists.
+7. Confirm `data/state.json.bak` is created after the first save.
+8. Stop the app, replace `data/state.json` with garbage, and start again.
+   Confirm the app boots, recovers the previous state, and leaves a
+   `data/state.json.corrupt` file.
+9. Confirm `collections/` exists.
 
 ### Notes
 

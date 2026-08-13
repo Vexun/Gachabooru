@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { loadState, saveState, StateStore, removeEarned } = require('../server/state');
+const { loadState, saveState, StateStore, removeEarned, validateState } = require('../server/state');
 const { tempDir } = require('./helpers');
 
 test('init creates default state', () => {
@@ -97,4 +97,130 @@ test('removeEarned returns not removed for an unknown post', () => {
 
   assert.equal(result.removed, false);
   assert.equal(state.earned_posts.length, 1);
+});
+
+test('validateState rejects malformed states', () => {
+  assert.equal(validateState(null), false);
+  assert.equal(validateState({}), false);
+  assert.equal(validateState('nope'), false);
+  assert.equal(
+    validateState({
+      earned_posts: [],
+      pending_downloads: [],
+      balance: -1,
+      last_accrual_at: 0,
+      first_open_bonus_claimed: false,
+    }),
+    false,
+  );
+  assert.equal(
+    validateState({
+      earned_posts: [],
+      pending_downloads: [],
+      balance: 0,
+      last_accrual_at: 0,
+      first_open_bonus_claimed: false,
+    }),
+    true,
+  );
+});
+
+test('saveState writes a backup copy', () => {
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  const state = loadState(file, 1000);
+  state.balance = 5;
+  saveState(file, state);
+
+  const backup = JSON.parse(fs.readFileSync(`${file}.bak`, 'utf8'));
+  assert.equal(backup.balance, 5);
+});
+
+test('loadState recovers from the backup when the main file is corrupt', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  const state = loadState(file, 1000);
+  state.balance = 9;
+  state.first_open_bonus_claimed = true;
+  saveState(file, state);
+
+  fs.writeFileSync(file, '{not valid json');
+
+  const recovered = loadState(file, 2000);
+  assert.equal(recovered.balance, 9);
+  assert.equal(recovered.first_open_bonus_claimed, true);
+  assert.equal(fs.existsSync(`${file}.corrupt`), true);
+  const restored = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(restored.balance, 9);
+});
+
+test('loadState starts fresh when corrupt and no backup exists', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  fs.writeFileSync(file, '{broken');
+
+  const state = loadState(file, 1000);
+  assert.equal(state.balance, 0);
+  assert.equal(state.first_open_bonus_claimed, false);
+  assert.equal(fs.existsSync(`${file}.corrupt`), true);
+  assert.equal(fs.existsSync(file), true);
+});
+
+test('loadState recovers a deleted main file from the backup', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  const state = loadState(file, 1000);
+  state.balance = 4;
+  saveState(file, state);
+
+  fs.rmSync(file);
+
+  const recovered = loadState(file, 2000);
+  assert.equal(recovered.balance, 4);
+  const restored = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(restored.balance, 4);
+});
+
+test('loadState rolls back when the state is structurally invalid', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  const state = loadState(file, 1000);
+  state.balance = 6;
+  saveState(file, state);
+
+  fs.writeFileSync(file, JSON.stringify({ balance: 'not-a-number', earned_posts: 'oops' }));
+
+  const recovered = loadState(file, 2000);
+  assert.equal(recovered.balance, 6);
+});
+
+test('saveState refuses to write an invalid state', (t) => {
+  t.mock.method(console, 'error', () => {});
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  const state = loadState(file, 1000);
+  state.balance = 3;
+  saveState(file, state);
+
+  const saved = saveState(file, { balance: 'bad', earned_posts: null });
+  assert.equal(saved, false);
+  const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(onDisk.balance, 3);
+});
+
+test('createApp boots with a corrupt state file instead of crashing', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const dataDir = tempDir();
+  const collectionsDir = tempDir();
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(path.join(dataDir, 'state.json'), '{corrupt');
+
+  const { createApp } = require('../server/index');
+  const app = createApp({ dataDir, collectionsDir }).app;
+  assert.ok(app);
+  assert.equal(fs.existsSync(path.join(dataDir, 'state.json.corrupt')), true);
 });

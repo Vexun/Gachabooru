@@ -63,6 +63,14 @@ first, with a Load more button for large collections. Click an image for
 a full-size view. Delete an image to remove its file and metadata; the
 image becomes eligible for future rolls.
 
+## Data
+
+The collection and balance live in `data/state.json`. Each save also
+writes a backup to `data/state.json.bak`. If the state file is ever
+corrupted, the app recovers from the backup on startup; if no backup is
+available it starts fresh and preserves the broken file as
+`data/state.json.corrupt` for inspection.
+
 ## Configuration
 
 Environment variables:
