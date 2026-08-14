@@ -61,7 +61,9 @@ Banked images are stored under `collections/<banner_tag>/`. Open the
 Collection page (via the header link) to browse them in a gallery, newest
 first, with a Load more button for large collections. Click an image for
 a full-size view. Delete an image to remove its file and metadata; the
-image becomes eligible for future rolls.
+image becomes eligible for future rolls. Images whose download is still
+pending are marked with a small badge; they are retried automatically
+(see below).
 
 ## Data
 
@@ -85,8 +87,8 @@ The app binds to localhost only.
 
 The app uses the public Danbooru API. Requests are throttled to about 1
 per second to respect rate limits. Image downloads may be challenged by
-the CDN; failed downloads are queued and retried on the next bank of the
-same image.
+the CDN; failed downloads are queued and retried automatically when the
+app starts and periodically while it runs.
 
 ## Security
 

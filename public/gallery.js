@@ -96,6 +96,12 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
       img.src = srcFor(item);
       img.alt = `post ${item.post_id}`;
       card.append(img);
+      if (item.downloaded === false) {
+        const chip = document.createElement('div');
+        chip.className = 'gallery-pending-chip';
+        chip.textContent = 'pending';
+        card.append(chip);
+      }
       card.addEventListener('click', () => openDetail(item));
       grid.append(card);
     }

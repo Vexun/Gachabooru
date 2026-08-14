@@ -79,6 +79,23 @@ class Downloader {
     );
   }
 
+  async drainPending(state) {
+    const queued = [...state.pending_downloads];
+    let retried = 0;
+    for (const item of queued) {
+      // Reuse bank: for an earned post the existing-file branch retries the
+      // download and removes the item from the queue on success.
+      const outcome = await this.bank(state, {
+        post: item.post,
+        bannerTag: item.banner_tag,
+      });
+      if (outcome.downloaded) {
+        retried += 1;
+      }
+    }
+    return { retried, remaining: state.pending_downloads.length };
+  }
+
   async bank(state, { post, bannerTag }) {
     const filePath = this.pathFor(post, bannerTag);
     const fullPath = path.join(this.collectionsDir, filePath);

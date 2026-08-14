@@ -213,18 +213,20 @@ Slice 5 shows the earned collection and supports deletion.
   - `test/state.test.js` — the state lists earned posts, `removeEarned`
     deletes the file and metadata (including queued downloads), tolerates
     a missing file, and reports not-removed for an unknown post.
+  - `test/download.test.js` — `drainPending` retries queued downloads,
+    keeps items that still fail, and is a no-op on an empty queue.
   - `test/routes.test.js` — `GET /api/earned` lists earned images newest
-    first with pagination metadata (`page`, `limit`, `total`), paginates
-    across pages, returns an empty page past the end, and rejects invalid
-    pagination with 422. `DELETE /api/earned/:postId` removes the file
-    and metadata and returns 404 for an unknown post, and `collections/`
-    images are served statically.
+    first with pagination metadata (`page`, `limit`, `total`), reports a
+    `downloaded` flag per entry, paginates across pages, returns an empty
+    page past the end, and rejects invalid pagination with 422. `DELETE
+    /api/earned/:postId` removes the file and metadata and returns 404 for
+    an unknown post, and `collections/` images are served statically.
   - `test/client/gallery.test.js` — the gallery renders a grid, hides the
     load-more button when everything fits on one page, loads more pages
     and appends cards, resets to the first page on reload, shows an empty
     state, opens a full-size view on click, requires confirmation before
-    deleting (and removes the item afterwards), and closes without
-    deleting.
+    deleting (and removes the item afterwards), closes without deleting,
+    and marks images with a pending badge when their file is missing.
   - `test/client/collection.test.js` — the collection page mounts the
     gallery and loads it, and opens the close-detection websocket.
   - `test/client/close-detection.test.js` — the websocket keep-alive
@@ -259,6 +261,13 @@ Slice 5 shows the earned collection and supports deletion.
     `curl "http://127.0.0.1:3000/api/earned?limit=2&page=2"` returns the
     next slice with `page`, `limit`, and `total` fields, and
     `?limit=0` returns 422.
+13. To observe pending downloads, bank an image while the CDN is
+    unreachable (for example, disconnect the network during a roll).
+    Confirm the image shows a "pending" badge in the Collection. Restore
+    the network and restart the app (or wait for the periodic retry), and
+    confirm the file downloads and the badge clears. Confirm
+    `curl "http://127.0.0.1:3000/api/earned"` reports `downloaded: false`
+    while the file is missing and `downloaded: true` once it lands.
 
 ## Slice 6 — Economy
 

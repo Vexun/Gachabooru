@@ -173,3 +173,63 @@ test('bank retries a missing file for an already-earned post', async () => {
   assert.equal(fs.existsSync(path.join(dir, 'b', '2.jpg')), true);
   assert.equal(state.earned_posts.length, 1);
 });
+
+test('drainPending retries queued downloads and clears them on success', async () => {
+  const dir = tempDir();
+  const downloader = new Downloader({
+    collectionsDir: dir,
+    backoffMs: 0,
+    retries: 0,
+    fetchImpl: okFetch('landed'),
+  });
+  const state = freshState();
+  state.earned_posts = [{ post_id: 7, file_path: 'tag/7.jpg', earned_at: '2026-01-01T00:00:00.000Z' }];
+  state.pending_downloads = [{ post_id: 7, post: post(7), banner_tag: 'tag' }];
+
+  const result = await downloader.drainPending(state);
+
+  assert.deepEqual(result, { retried: 1, remaining: 0 });
+  assert.equal(fs.readFileSync(path.join(dir, 'tag', '7.jpg'), 'utf8'), 'landed');
+  assert.equal(state.pending_downloads.length, 0);
+});
+
+test('drainPending keeps queued items that still fail', async () => {
+  const dir = tempDir();
+  const downloader = new Downloader({
+    collectionsDir: dir,
+    backoffMs: 0,
+    retries: 0,
+    fetchImpl: async () => ({ ok: false, status: 503 }),
+  });
+  const state = freshState();
+  state.earned_posts = [
+    { post_id: 8, file_path: 'tag/8.jpg', earned_at: '2026-01-01T00:00:00.000Z' },
+    { post_id: 9, file_path: 'tag/9.jpg', earned_at: '2026-01-01T00:00:00.000Z' },
+  ];
+  state.pending_downloads = [
+    { post_id: 8, post: post(8), banner_tag: 'tag' },
+    { post_id: 9, post: post(9), banner_tag: 'tag' },
+  ];
+
+  const result = await downloader.drainPending(state);
+
+  assert.deepEqual(result, { retried: 0, remaining: 2 });
+  assert.equal(state.pending_downloads.length, 2);
+  assert.equal(state.earned_posts.length, 2);
+  assert.equal(fs.existsSync(path.join(dir, 'tag', '8.jpg')), false);
+  assert.equal(fs.existsSync(path.join(dir, 'tag', '9.jpg')), false);
+});
+
+test('drainPending is a no-op with an empty queue', async () => {
+  const downloader = new Downloader({
+    collectionsDir: tempDir(),
+    fetchImpl: async () => {
+      throw new Error('should not be called');
+    },
+  });
+  const state = freshState();
+
+  const result = await downloader.drainPending(state);
+
+  assert.deepEqual(result, { retried: 0, remaining: 0 });
+});

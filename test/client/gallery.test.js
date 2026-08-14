@@ -107,6 +107,20 @@ test('load resets to the first page', async (t) => {
   assert.equal(gallery.getItems()[0].post_id, 1);
 });
 
+test('marks images with a pending badge when the file is missing', async (t) => {
+  const ok = { ...entry(4, '2026-01-04T00:00:00.000Z'), downloaded: true };
+  const pending = { ...entry(3, '2026-01-03T00:00:00.000Z'), downloaded: false };
+  const { gallery } = makeGallery(t, paginatedFetch([ok, pending], 2), 2);
+
+  await gallery.load();
+
+  const items = gallery.el.querySelectorAll('.gallery-item');
+  assert.equal(items.length, 2);
+  assert.equal(items[0].querySelector('.gallery-pending-chip'), null);
+  const chip = items[1].querySelector('.gallery-pending-chip');
+  assert.equal(chip.textContent, 'pending');
+});
+
 test('clicking an item opens the full-size view', async (t) => {
   const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
   await gallery.load();

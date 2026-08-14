@@ -42,7 +42,8 @@ function openBrowser(url) {
 }
 
 function main() {
-  const { app } = createApp();
+  const { app, startDrain } = createApp();
+  startDrain();
   const server = app.listen(PORT, HOST, () => {
     const url = `http://${HOST}:${PORT}`;
     console.log(`Gachabooru running at ${url}`);

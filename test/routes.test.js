@@ -489,6 +489,33 @@ test('GET /api/earned returns newest entries first', async (t) => {
   );
 });
 
+test('GET /api/earned reports the downloaded flag per entry', async (t) => {
+  const dataDir = tempDir();
+  const collectionsDir = tempDir();
+  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
+  state.get().earned_posts = [
+    { post_id: 1, file_path: 'tag/1.jpg', earned_at: '2026-01-01T00:00:00.000Z' },
+    { post_id: 2, file_path: 'tag/2.jpg', earned_at: '2026-01-02T00:00:00.000Z' },
+  ];
+  state.save();
+  fs.mkdirSync(path.join(collectionsDir, 'tag'), { recursive: true });
+  fs.writeFileSync(path.join(collectionsDir, 'tag', '1.jpg'), 'x');
+
+  const base = await startServer(
+    t,
+    createApp({
+      dataDir,
+      collectionsDir,
+      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
+    }).app,
+  );
+
+  const data = await (await fetch(`${base}/api/earned`)).json();
+  const byId = Object.fromEntries(data.entries.map((e) => [e.post_id, e.downloaded]));
+  assert.equal(byId[1], true);
+  assert.equal(byId[2], false);
+});
+
 test('GET /api/earned paginates with page and limit', async (t) => {
   const dataDir = tempDir();
   const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);

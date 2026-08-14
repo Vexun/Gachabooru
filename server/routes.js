@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
 const express = require('express');
 const { removeEarned } = require('./state');
 const economy = require('./economy');
@@ -28,6 +30,14 @@ function newestFirst(entries) {
   return [...entries].sort(
     (a, b) => (new Date(b.earned_at).getTime() || 0) - (new Date(a.earned_at).getTime() || 0),
   );
+}
+
+function withDownloaded(entries, collectionsDir) {
+  return entries.map((entry) => ({
+    ...entry,
+    downloaded:
+      entry.file_path && fs.existsSync(path.join(collectionsDir, entry.file_path)),
+  }));
 }
 
 function createRouter(ctx) {
@@ -132,7 +142,7 @@ function createRouter(ctx) {
     }
     const earned = newestFirst(ctx.store.get().earned_posts);
     const start = (pagination.page - 1) * pagination.limit;
-    const entries = earned.slice(start, start + pagination.limit);
+    const entries = withDownloaded(earned.slice(start, start + pagination.limit), ctx.collectionsDir);
     res.json({
       entries,
       page: pagination.page,
