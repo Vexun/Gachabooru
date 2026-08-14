@@ -85,10 +85,20 @@ function saveState(filePath, state) {
     console.error(`refusing to write invalid state to ${filePath}`);
     return false;
   }
+  const serialized = JSON.stringify(state, null, 2);
+  let existing = null;
+  try {
+    existing = fs.readFileSync(filePath, 'utf8');
+  } catch {
+    // missing or unreadable: write below
+  }
+  if (existing === serialized) {
+    return false;
+  }
   const dir = path.dirname(filePath);
   fs.mkdirSync(dir, { recursive: true });
   const tmp = `${filePath}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
+  fs.writeFileSync(tmp, serialized);
   fs.renameSync(tmp, filePath);
   try {
     fs.copyFileSync(filePath, `${filePath}${BACKUP_SUFFIX}`);

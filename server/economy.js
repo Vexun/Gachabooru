@@ -20,14 +20,19 @@ function getBalance(state, now = Date.now()) {
   if (now < state.last_accrual_at) {
     return state.balance;
   }
-  let balance = state.balance;
-
   const wholeHours = Math.floor((now - state.last_accrual_at) / HOUR_MS);
+  const daysCrossed =
+    Math.floor(now / DAY_MS) - Math.floor(state.last_accrual_at / DAY_MS);
+
+  // Nothing accrues and no day boundary crossed; leave the state untouched.
+  if (wholeHours === 0 && daysCrossed === 0) {
+    return state.balance;
+  }
+
+  let balance = state.balance;
   const headroom = Math.max(0, CAP - balance);
   balance += Math.min(headroom, wholeHours * ACCRUAL_PER_HOUR);
 
-  const daysCrossed =
-    Math.floor(now / DAY_MS) - Math.floor(state.last_accrual_at / DAY_MS);
   if (daysCrossed > 0 && balance < CAP) {
     balance += DAILY_BONUS;
   }

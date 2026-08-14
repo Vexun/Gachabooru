@@ -136,6 +136,18 @@ test('saveState writes a backup copy', () => {
   assert.equal(backup.balance, 5);
 });
 
+test('saveState skips the write when nothing changed', () => {
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  const state = loadState(file, 1000);
+  state.balance = 5;
+  assert.equal(saveState(file, state), true);
+
+  fs.rmSync(`${file}.bak`);
+  assert.equal(saveState(file, state), false);
+  assert.equal(fs.existsSync(`${file}.bak`), false);
+});
+
 test('loadState recovers from the backup when the main file is corrupt', (t) => {
   t.mock.method(console, 'warn', () => {});
   const dir = tempDir();

@@ -101,3 +101,12 @@ test('getBalance ignores a now earlier than the last check', () => {
   const state = makeState(7, 1000);
   assert.equal(economy.getBalance(state, 500), 7);
 });
+
+test('getBalance leaves the state untouched when nothing accrues', () => {
+  const state = makeState(7, 1000);
+  const balance = economy.getBalance(state, 1000 + 30 * 60 * 1000);
+
+  assert.equal(balance, 7);
+  assert.equal(state.balance, 7);
+  assert.equal(state.last_accrual_at, 1000);
+});
