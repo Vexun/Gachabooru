@@ -34,8 +34,11 @@ client page, and the server-side state module.
   - `test/economy.test.js` — first-open bonus grants +10 exactly once.
   - `test/routes.test.js` — `GET /api/health` returns 200; the static
     client page is served.
-  - `test/client/app.test.js` — the stub page renders the title; the
-    server status indicator turns "online" after a healthy health check.
+  - `test/client/app.test.js` — `index.html` declares the sections
+    `createApp` depends on and loads the client scripts in order;
+    `createApp` wires the banner picker, the roll, and the close-detection
+    websocket, and the status indicator turns "online" on a healthy health
+    check and "unreachable" when it fails.
 - `npm run lint` — clean output, no warnings.
 
 ### Manual smoke
@@ -183,8 +186,9 @@ image downloads.
     all 5 banks all 5, the coin flip resolves heads/tails fairly, banking
     hides the flip panel, a second back-out press does not wipe the
     results, and banking fires the `onBanked` callback.
-  - `test/client/app.test.js` — the main page renders the title and shows
-    the server status.
+  - `test/client/app.test.js` — the main page wires the banner picker,
+    roll, and close detection, and the server status indicator reflects
+    the health check.
 - `npm run lint` — clean output.
 
 ### Manual smoke
