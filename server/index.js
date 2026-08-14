@@ -54,7 +54,12 @@ function createApp(opts = {}) {
     }),
   );
 
-  function startDrain() {
+  function startDrain(sched = {}) {
+    const setTimeoutImpl = sched.setTimeout || setTimeout;
+    const setIntervalImpl = sched.setInterval || setInterval;
+    const delayMs = sched.delayMs ?? opts.drainDelayMs ?? DRAIN_DELAY_MS;
+    const intervalMs = sched.intervalMs ?? opts.drainIntervalMs ?? DRAIN_INTERVAL_MS;
+
     let draining = false;
     const runDrain = async () => {
       if (draining || store.get().pending_downloads.length === 0) {
@@ -72,12 +77,16 @@ function createApp(opts = {}) {
         draining = false;
       }
     };
-    const startup = setTimeout(runDrain, opts.drainDelayMs ?? DRAIN_DELAY_MS);
-    startup.unref();
+    const startup = setTimeoutImpl(runDrain, delayMs);
+    if (startup && startup.unref) {
+      startup.unref();
+    }
     // Failed downloads often need the CDN to unblock; a slow periodic pass
     // recovers them without hammering the upstream host.
-    const interval = setInterval(runDrain, opts.drainIntervalMs ?? DRAIN_INTERVAL_MS);
-    interval.unref();
+    const interval = setIntervalImpl(runDrain, intervalMs);
+    if (interval && interval.unref) {
+      interval.unref();
+    }
   }
 
   return { app, store, downloader, startDrain };

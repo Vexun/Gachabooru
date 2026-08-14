@@ -73,7 +73,9 @@ banner picker in the UI.
   - `test/danbooru.test.js` — autocomplete maps results, filters to
     general/copyright/character categories (0, 3, 4), skips artist and
     meta tags, requests the correct URL, returns empty for an empty
-    query, and throws a typed error on network or HTTP failure.
+    query, and throws a typed error on network or HTTP failure. `Throttle`
+    lets the first wait through, spaces consecutive waits by the minimum
+    interval, and never sleeps at a zero interval.
   - `test/routes.test.js` — `GET /api/autocomplete` returns mapped
     results, rejects an empty query with 422, and returns 502 on
     upstream failure.
@@ -219,6 +221,10 @@ Slice 5 shows the earned collection and supports deletion.
     a missing file, and reports not-removed for an unknown post.
   - `test/download.test.js` — `drainPending` retries queued downloads,
     keeps items that still fail, and is a no-op on an empty queue.
+    `test/drain.test.js` — `startDrain` schedules a startup and an
+    interval pass, drains and saves on success, skips an empty queue,
+    does not save when nothing retried, guards against overlapping runs,
+    and swallows downloader errors.
   - `test/routes.test.js` — `GET /api/earned` lists earned images newest
     first with pagination metadata (`page`, `limit`, `total`), reports a
     `downloaded` flag per entry, paginates across pages, returns an empty
@@ -321,12 +327,16 @@ posts (completely safe for work).
   - `test/danbooru.test.js` — the client always applies the general-only
     filter (`rating:g`).
   - `test/download.test.js` — `safeTag` prevents path traversal in banner
-    tags.
+    tags and preserves Unicode letters while replacing other characters
+    with underscores.
   - `test/routes.test.js` — responses include a restrictive
     Content-Security-Policy (default-src none, self-only scripts and
     styles, images from `cdn.donmai.us`, same-origin websocket) and the
     `nosniff` / `no-referrer` companion headers. The API rate limiter
     returns 429 over the limit and exempts `/api/health`.
+  - `test/security.test.js` — `securityHeaders` reflects a valid host with
+    port, falls back to the default for a missing or injectable Host
+    header, and sets the companion headers.
   - `test/rate-limit.test.js` — the limiter passes requests under the
     limit, returns 429 with Retry-After over it, resets when the window
     expires, and never blocks exempt paths.

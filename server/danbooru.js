@@ -22,17 +22,19 @@ class DanbooruError extends Error {
 }
 
 class Throttle {
-  constructor(minIntervalMs) {
+  constructor(minIntervalMs, opts = {}) {
     this.minIntervalMs = minIntervalMs;
+    this.now = opts.now || Date.now;
+    this.sleep = opts.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.nextAt = 0;
   }
 
   async wait() {
-    const now = Date.now();
+    const now = this.now();
     const delay = Math.max(0, this.nextAt - now);
     this.nextAt = Math.max(this.nextAt, now) + this.minIntervalMs;
     if (delay > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await this.sleep(delay);
     }
   }
 }

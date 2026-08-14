@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { DanbooruClient, DanbooruError, buildRollPool, SAFE_TAGS } = require('../server/danbooru');
+const { DanbooruClient, DanbooruError, buildRollPool, SAFE_TAGS, Throttle } = require('../server/danbooru');
 
 function fakeFetch(jsonOrError) {
   return async () => {
@@ -17,6 +17,52 @@ function fakeFetch(jsonOrError) {
     };
   };
 }
+
+function fakeClock(initialTime) {
+  let t = initialTime;
+  const sleeps = [];
+  return {
+    now: () => t,
+    sleep: async (ms) => {
+      sleeps.push(ms);
+      t += ms;
+    },
+    getSleeps: () => sleeps,
+    advance(ms) {
+      t += ms;
+    },
+  };
+}
+
+test('Throttle lets the first wait through immediately', async () => {
+  const clock = fakeClock(0);
+  const throttle = new Throttle(1000, { now: clock.now, sleep: clock.sleep });
+
+  await throttle.wait();
+
+  assert.deepEqual(clock.getSleeps(), []);
+});
+
+test('Throttle spaces consecutive waits by the minimum interval', async () => {
+  const clock = fakeClock(0);
+  const throttle = new Throttle(1000, { now: clock.now, sleep: clock.sleep });
+
+  await throttle.wait();
+  await throttle.wait();
+  await throttle.wait();
+
+  assert.deepEqual(clock.getSleeps(), [1000, 1000]);
+});
+
+test('Throttle with a zero interval never sleeps', async () => {
+  const clock = fakeClock(0);
+  const throttle = new Throttle(0, { now: clock.now, sleep: clock.sleep });
+
+  await throttle.wait();
+  await throttle.wait();
+
+  assert.deepEqual(clock.getSleeps(), []);
+});
 
 const rawResults = [
   { type: 'tag-word', label: 'hatsune miku', value: 'hatsune_miku', category: 4, post_count: 100 },

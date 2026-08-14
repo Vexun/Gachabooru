@@ -1,8 +1,20 @@
 'use strict';
 
+const DEFAULT_HOST = '127.0.0.1';
+
+// Only hostname[:port] is safe to reflect into the CSP. Reject everything
+// else (newlines, semicolons, spaces) so the Host header cannot inject
+// directives.
+const HOST_PATTERN = /^[a-zA-Z0-9.-]+(:\d+)?$/;
+
+function sanitizeHost(raw) {
+  const host = String(raw || '').trim();
+  return HOST_PATTERN.test(host) ? host : DEFAULT_HOST;
+}
+
 function securityHeaders() {
   return (req, res, next) => {
-    const host = req.headers.host || '127.0.0.1';
+    const host = sanitizeHost(req.headers && req.headers.host);
     const csp = [
       "default-src 'none'",
       "script-src 'self'",
@@ -22,4 +34,4 @@ function securityHeaders() {
   };
 }
 
-module.exports = { securityHeaders };
+module.exports = { securityHeaders, sanitizeHost };

@@ -44,6 +44,27 @@ test('safeTag prevents path traversal in banner tags', () => {
   assert.equal(safeTag(''), 'untagged');
 });
 
+test('safeTag preserves Unicode letters in banner tags', () => {
+  assert.equal(safeTag('初音ミク'), '初音ミク');
+  assert.equal(safeTag('café'), 'café');
+  assert.equal(safeTag('白雪姫'), '白雪姫');
+});
+
+test('safeTag replaces non-letter characters in banner tags with underscores', () => {
+  assert.equal(safeTag('hatsune miku'), 'hatsune_miku');
+  assert.equal(safeTag('test 初音 miku'), 'test_初音_miku');
+  assert.equal(safeTag('🎨'), '_');
+  assert.equal(safeTag('tag!x'), 'tag_x');
+});
+
+test('pathFor builds a Unicode-safe collection path', () => {
+  const downloader = new Downloader({ collectionsDir: tempDir() });
+  const aPost = post(42);
+
+  assert.equal(downloader.pathFor(aPost, '初音ミク'), path.join('初音ミク', '42.jpg'));
+  assert.equal(downloader.pathFor(aPost, '../../etc'), path.join('______etc', '42.jpg'));
+});
+
 test('bank downloads the file and records metadata', async () => {
   const dir = tempDir();
   const downloader = new Downloader({ collectionsDir: dir, fetchImpl: okFetch('imgdata') });
