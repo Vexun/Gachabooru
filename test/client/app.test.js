@@ -13,6 +13,11 @@ const INDEX_HTML = fs.readFileSync(
   'utf8',
 );
 
+const STYLES_CSS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'public', 'styles.css'),
+  'utf8',
+);
+
 function appDocument() {
   const { doc } = createDocument();
   const status = doc.createElement('div');
@@ -43,6 +48,18 @@ test('index.html loads the client scripts in dependency order', () => {
   assert.ok(picker > close, 'banner-picker.js loads after close-detection.js');
   assert.ok(roll > picker, 'roll.js loads after banner-picker.js');
   assert.ok(app > roll, 'app.js loads last');
+});
+
+test('index.html loads the confetti vendor script before app.js', () => {
+  const vendor = INDEX_HTML.indexOf('vendor/confetti.browser.min.js');
+  const app = INDEX_HTML.indexOf('app.js');
+  assert.ok(vendor >= 0, 'vendor/confetti.browser.min.js is included');
+  assert.ok(vendor < app, 'the vendor script loads before app.js');
+});
+
+test('styles.css scaffolds reduced motion and the visually hidden utility', () => {
+  assert.match(STYLES_CSS, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(STYLES_CSS, /\.sr-only\s*\{/);
 });
 
 test('createApp wires the picker, roll, and close detection', async () => {

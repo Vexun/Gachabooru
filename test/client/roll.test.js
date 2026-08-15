@@ -65,6 +65,15 @@ test('roll button is disabled until a banner is chosen', (t) => {
   assert.match(roll.el.textContent, /Banner: hatsune miku/);
 });
 
+test('the flip panel contains a polite aria-live region', (t) => {
+  const { roll } = makeRoll(t, fakeFetch({ posts: [] }));
+
+  const live = roll.el.querySelector('.flip-live');
+  assert.ok(live, 'aria-live region exists');
+  assert.equal(live.getAttribute('aria-live'), 'polite');
+  assert.equal(live.classList.contains('sr-only'), true);
+});
+
 test('requesting a pool renders 5 cards in peek state', async (t) => {
   const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
   roll.setBanner(banner);

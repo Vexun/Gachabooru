@@ -79,7 +79,11 @@ function createRoll({
   const flipResult = document.createElement('div');
   flipResult.className = 'flip-result';
 
-  flipPanel.append(flipStatus, callHeads, callTails, flipBtn, backOutBtn, flipResult);
+  const liveRegion = document.createElement('div');
+  liveRegion.className = 'flip-live sr-only';
+  liveRegion.setAttribute('aria-live', 'polite');
+
+  flipPanel.append(flipStatus, callHeads, callTails, flipBtn, backOutBtn, flipResult, liveRegion);
 
   const resultsEl = document.createElement('div');
   resultsEl.className = 'roll-results';

@@ -394,8 +394,38 @@ closed from the browser.
 6. Start with `npm run serve` and confirm the server stays up after
    closing the browser.
 
+## Play Page Overhaul — Slice 0: Foundation
 
+Slice 0 prepares the codebase for animation work without changing
+gameplay behavior. See `PRD.md` and `PLAN.md` for the full overhaul.
 
+### Automated checks
+
+- `npm test` — Slice 0 adds:
+  - `test/client/app.test.js` — `index.html` loads
+    `vendor/confetti.browser.min.js` before `app.js`, and `styles.css`
+    declares the `prefers-reduced-motion: reduce` media query and the
+    `.sr-only` utility class.
+  - `test/client/roll.test.js` — the flip panel contains an
+    `.flip-live` region with `aria-live="polite"`.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Confirm `curl -sI "http://127.0.0.1:3000/vendor/confetti.browser.min.js"`
+   returns 200.
+4. Confirm the page loads with no console errors.
+5. Play through a roll (pick a tag, roll, peek, flip, back out) and
+   confirm the behavior is unchanged from before the overhaul.
+6. Enable `prefers-reduced-motion` in the OS settings and confirm the
+   page still renders and plays normally.
+
+### Notes
+
+- `public/vendor/` holds the pinned canvas-confetti 1.9.4 build and its
+  ISC license. The file name ends in `.min.js`, so oxlint skips it.
 
 
 
