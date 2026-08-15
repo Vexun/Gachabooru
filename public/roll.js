@@ -127,10 +127,26 @@ function createRoll({
       card.className = 'card';
       card.dataset.postId = String(post.id);
       card.dataset.position = String(idx + 1);
+
+      const inner = document.createElement('div');
+      inner.className = 'card-inner';
+
+      const front = document.createElement('div');
+      front.className = 'card-front';
       const img = document.createElement('img');
       img.src = imgSrc(post.large_file_url || post.preview_file_url || post.file_url);
       img.alt = `post ${post.id}`;
-      card.append(img);
+      front.append(img);
+
+      const back = document.createElement('div');
+      back.className = 'card-back';
+      const number = document.createElement('span');
+      number.className = 'card-number';
+      number.textContent = String(idx + 1);
+      back.append(number);
+
+      inner.append(front, back);
+      card.append(inner);
       grid.append(card);
       return card;
     });
@@ -142,31 +158,13 @@ function createRoll({
       return;
     }
     card.classList.remove('covered');
-    const back = card.querySelector('.card-back');
-    if (back) {
-      back.remove();
-    }
-    const img = card.querySelector('img');
-    if (img) {
-      img.hidden = false;
-    }
   }
 
   function coverCards() {
     state = 'covered';
     coverTimer = null;
     for (let i = 0; i < cards.length; i++) {
-      const card = cards[i];
-      card.classList.add('covered');
-      const img = card.querySelector('img');
-      if (img) {
-        img.hidden = true;
-      }
-      const back = document.createElement('div');
-      back.className = 'card-back';
-      back.dataset.number = String(i + 1);
-      back.textContent = String(i + 1);
-      card.append(back);
+      cards[i].classList.add('covered');
     }
     beginFlips();
   }
@@ -377,6 +375,7 @@ function createRoll({
     requestPool,
     renderCards,
     coverCards,
+    revealCard,
     cancelCover,
     destroy,
     setCall,

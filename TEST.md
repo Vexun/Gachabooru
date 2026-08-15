@@ -427,6 +427,37 @@ gameplay behavior. See `PRD.md` and `PLAN.md` for the full overhaul.
 - `public/vendor/` holds the pinned canvas-confetti 1.9.4 build and its
   ISC license. The file name ends in `.min.js`, so oxlint skips it.
 
+## Play Page Overhaul — Slice 1: Card DOM Restructure & 3D Flip
+
+Slice 1 replaces the flat card DOM with a two-sided 3D structure and
+switches cover/reveal to CSS class toggles. See `PRD.md` section 4.1 and
+`PLAN.md` Slice 1.
+
+### Automated checks
+
+- `npm test` — Slice 1 adds to `test/client/roll.test.js`:
+  - `renderCards` builds `.card-inner` with `.card-front` and `.card-back`
+    children; the back holds a numbered `.card-number` span.
+  - `coverCards` toggles the `.covered` class without appending new back
+    elements.
+  - `revealCard` removes `.covered` from the target card only.
+  - The 3D structure survives a full peek-cover-reveal cycle.
+  - The numbered-backs and peek-state tests assert the new structure.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Pick a tag and click Roll.
+4. Confirm the 5 images show face-up during the peek.
+5. Wait 3 seconds. Confirm all 5 cards flip to their backs with a smooth
+   3D rotation and show the striped numbered backs.
+6. Play through a win. Confirm the winning card flips back to its image
+   smoothly.
+7. Enable `prefers-reduced-motion` in the OS settings and confirm the
+   cover and reveal happen instantly instead of rotating.
+
 
 
 

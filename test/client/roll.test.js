@@ -85,8 +85,9 @@ test('requesting a pool renders 5 cards in peek state', async (t) => {
   const cards = roll.el.querySelectorAll('.card');
   assert.equal(cards.length, 5);
   assert.equal(cards[0].dataset.postId, '1');
-  assert.equal(cards[0].querySelector('img').src, `/api/image?url=${encodeURIComponent('https://cdn.donmai.us/1.jpg')}`);
-  assert.equal(cards[0].querySelector('img').hidden, false);
+  const frontImg = cards[0].querySelector('.card-inner').querySelector('.card-front').querySelector('img');
+  assert.equal(frontImg.src, `/api/image?url=${encodeURIComponent('https://cdn.donmai.us/1.jpg')}`);
+  assert.equal(frontImg.hidden, false);
   assert.equal(timers.pending()[0], 3000);
 });
 
@@ -103,7 +104,83 @@ test('cover happens after the peek timer fires', async (t) => {
   const cards = roll.el.querySelectorAll('.card');
   for (const card of cards) {
     assert.equal(card.classList.contains('covered'), true);
-    assert.equal(card.querySelector('img').hidden, true);
+  }
+});
+
+test('renderCards builds a two-sided card structure', async (t) => {
+  const { roll } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+
+  const cards = roll.el.querySelectorAll('.card');
+  assert.equal(cards.length, 5);
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    assert.equal(card.dataset.position, String(i + 1));
+    const inner = card.querySelector('.card-inner');
+    assert.ok(inner, 'card has a card-inner');
+    const front = inner.querySelector('.card-front');
+    const back = inner.querySelector('.card-back');
+    assert.ok(front, 'card-inner has a card-front');
+    assert.ok(back, 'card-inner has a card-back');
+    assert.ok(front.querySelector('img'), 'card-front holds the image');
+    const number = back.querySelector('.card-number');
+    assert.ok(number, 'card-back holds a numbered span');
+    assert.equal(number.textContent, String(i + 1));
+  }
+});
+
+test('coverCards toggles the covered class without appending backs', async (t) => {
+  const { roll } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+  const before = roll.el.querySelectorAll('.card-back').length;
+
+  roll.coverCards();
+
+  const cards = roll.el.querySelectorAll('.card');
+  assert.equal(cards.length, 5);
+  for (const card of cards) {
+    assert.equal(card.classList.contains('covered'), true);
+  }
+  assert.equal(roll.el.querySelectorAll('.card-back').length, before);
+});
+
+test('revealCard removes the covered class from the target card only', async (t) => {
+  const { roll } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.revealCard(2);
+
+  const cards = roll.el.querySelectorAll('.card');
+  assert.equal(cards[2].classList.contains('covered'), false);
+  assert.equal(cards[0].classList.contains('covered'), true);
+  assert.equal(cards[4].classList.contains('covered'), true);
+});
+
+test('the 3D structure survives a peek-cover-reveal cycle', async (t) => {
+  const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+  timers.fireAll();
+  roll.revealCard(0);
+
+  const cards = roll.el.querySelectorAll('.card');
+  assert.equal(cards.length, 5);
+  assert.equal(cards[0].classList.contains('covered'), false);
+  for (let i = 1; i < cards.length; i++) {
+    assert.equal(cards[i].classList.contains('covered'), true);
+  }
+  for (const card of cards) {
+    assert.ok(card.querySelector('.card-inner'));
+    assert.ok(card.querySelector('.card-inner').querySelector('.card-front'));
+    assert.ok(card.querySelector('.card-inner').querySelector('.card-back'));
   }
 });
 
@@ -118,8 +195,7 @@ test('covered cards show identical numbered backs', async (t) => {
   assert.equal(backs.length, 5);
   backs.forEach((back, idx) => {
     assert.equal(back.classList.contains('card-back'), true);
-    assert.equal(back.dataset.number, String(idx + 1));
-    assert.equal(back.textContent, String(idx + 1));
+    assert.equal(back.querySelector('.card-number').textContent, String(idx + 1));
   });
 });
 
@@ -220,7 +296,7 @@ test('a win reveals the card and records a pending win', async (t) => {
   assert.equal(roll.getPendingWins().length, 1);
   const firstCard = roll.getCards()[firstPos];
   assert.equal(firstCard.classList.contains('covered'), false);
-  assert.equal(firstCard.querySelector('img').hidden, false);
+  assert.ok(firstCard.querySelector('.card-inner').querySelector('.card-front').querySelector('img'));
 });
 
 test('a loss erases pending wins and ends the roll', async (t) => {
