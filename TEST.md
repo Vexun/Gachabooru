@@ -539,6 +539,44 @@ active card while dimming the others, and slides the flip panel in. See
 11. Enable `prefers-reduced-motion` in the OS settings and confirm the
     coin flip is instant.
 
+## Play Page Overhaul — Slice 4: Win/Loss Micro-Animations
+
+Slice 4 adds emotional feedback for each flip outcome: a gold flash and
+floating "+1" badge on a win, and a shake, red tint, panel slide-down,
+and loss message on a loss. See `PRD.md` section 4.2 and `PLAN.md`
+Slice 4.
+
+### Automated checks
+
+- `npm test` — Slice 4 adds to `test/client/roll.test.js`:
+  - A win adds `.win-flash` to the won card and creates a `.float-badge`
+    inside it; the badge is removed on `animationend`.
+  - The next card is not focused until the focus delay elapses.
+  - A loss adds `.shake` and `.lost-tint` to the active card, shows the
+    `.roll-loss` message, and puts the flip panel into `.is-leaving`
+    before it hides.
+  - The `.flip-live` region announces the outcome after the resolution
+    pause.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Roll and play through to the flip sequence.
+4. Win a card. Confirm the card flips face-up with a gold flash and a
+   "+1" badge that floats up and fades, and that the "It matches" message
+   holds for about 3 seconds before the next card's controls appear.
+5. Confirm the won card stays bright beside the next highlighted card.
+6. Lose a card. Confirm the card shakes and tints red, the flip panel
+   slides down and fades out, a muted "You lost the roll" message fades
+   in, and the Roll button stays disabled for about a second before a new
+   roll can start.
+7. Confirm the outcome is announced to screen readers.
+8. Enable `prefers-reduced-motion` in the OS settings and confirm all
+   win/loss animations are instant.
+
+
 
 
 

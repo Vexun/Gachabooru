@@ -29,6 +29,9 @@ function createRoll({
   const FLIP_DURATION_MS = 600;
   const COIN_DURATION_MS = 800;
   const RESOLVE_DELAY_MS = 500;
+  const WIN_PAUSE_MS = 3000;
+  const LOSS_LOCKOUT_MS = 1000;
+  const PANEL_SLIDE_MS = 300;
   const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
@@ -117,7 +120,10 @@ function createRoll({
   resultsEl.className = 'roll-results';
   resultsEl.hidden = true;
 
-  root.append(bannerLabel, balanceEl, button, grid, flipPanel, resultsEl, errorEl);
+  const lossEl = document.createElement('div');
+  lossEl.className = 'roll-loss';
+
+  root.append(bannerLabel, balanceEl, button, grid, flipPanel, lossEl, resultsEl, errorEl);
 
   let banner = null;
   let posts = [];
@@ -128,6 +134,9 @@ function createRoll({
   let flipTimer = null;
   let coinTimer = null;
   let resolveTimer = null;
+  let focusTimer = null;
+  let panelTimer = null;
+  let rollLockTimer = null;
   let flipping = false;
   let rollSeq = 0;
   let flipOrder = [];
@@ -315,6 +324,18 @@ function createRoll({
       clearTimeoutImpl(resolveTimer);
       resolveTimer = null;
     }
+    if (focusTimer) {
+      clearTimeoutImpl(focusTimer);
+      focusTimer = null;
+    }
+    if (panelTimer) {
+      clearTimeoutImpl(panelTimer);
+      panelTimer = null;
+    }
+    if (rollLockTimer) {
+      clearTimeoutImpl(rollLockTimer);
+      rollLockTimer = null;
+    }
   }
 
   function beginFlips() {
@@ -349,6 +370,11 @@ function createRoll({
 
   function renderFlipControls() {
     flipPanel.classList.add('is-visible');
+    flipPanel.classList.remove('is-leaving');
+    if (panelTimer) {
+      clearTimeoutImpl(panelTimer);
+      panelTimer = null;
+    }
     flipResult.textContent = '';
     flipping = false;
     if (coinTimer) {
@@ -368,6 +394,28 @@ function createRoll({
     flipStatus.textContent = `Card ${flipOrder[flipIndex] + 1}: call heads or tails`;
     unfocusCards();
     focusCard(flipOrder[flipIndex]);
+  }
+
+  function showFloatBadge(card) {
+    const badge = document.createElement('div');
+    badge.className = 'float-badge';
+    badge.textContent = '+1';
+    card.append(badge);
+    badge.addEventListener('animationend', () => badge.remove(), { once: true });
+  }
+
+  function hideFlipPanel() {
+    flipPanel.classList.remove('is-visible');
+    flipPanel.classList.add('is-leaving');
+    const onLeave = () => {
+      flipPanel.classList.remove('is-leaving');
+      if (panelTimer) {
+        clearTimeoutImpl(panelTimer);
+        panelTimer = null;
+      }
+    };
+    flipPanel.addEventListener('animationend', onLeave, { once: true });
+    panelTimer = setTimeoutImpl(onLeave, PANEL_SLIDE_MS + FALLBACK_BUFFER_MS);
   }
 
   function animateCoin(result, callback) {
@@ -419,6 +467,10 @@ function createRoll({
     }
     const won = [...pendingWins];
     pendingWins = [];
+    if (focusTimer) {
+      clearTimeoutImpl(focusTimer);
+      focusTimer = null;
+    }
     flipPanel.classList.remove('is-visible');
     for (const post of won) {
       try {
@@ -443,16 +495,34 @@ function createRoll({
     if (state !== 'covered') {
       return null;
     }
+    if (focusTimer) {
+      clearTimeoutImpl(focusTimer);
+      focusTimer = null;
+    }
     const pos = flipOrder[flipIndex];
     if (result !== call) {
       state = 'lost';
       pendingWins = [];
-      flipPanel.classList.remove('is-visible');
-      flipResult.textContent = `It was ${result} — you lost the roll. No images are kept.`;
+      const losingCard = cards[pos];
+      losingCard.classList.add('shake', 'lost-tint');
+      unfocusCards();
+      hideFlipPanel();
+      lossEl.textContent = 'You lost the roll. No images are kept.';
+      lossEl.classList.add('is-visible');
+      liveRegion.textContent = `${result[0].toUpperCase()}${result.slice(1)} — you lost the roll.`;
       renderResults([]);
+      button.disabled = true;
+      rollLockTimer = setTimeoutImpl(() => {
+        rollLockTimer = null;
+        setBalance(balance);
+      }, LOSS_LOCKOUT_MS);
       return { outcome: 'loss' };
     }
     revealCard(pos);
+    const wonCard = cards[pos];
+    wonCard.classList.add('win-flash');
+    showFloatBadge(wonCard);
+    unfocusCards();
     pendingWins.push(posts[pos]);
     flipIndex += 1;
     if (flipIndex >= cards.length) {
@@ -460,8 +530,11 @@ function createRoll({
       return { outcome: 'banked', banked };
     }
     flipResult.textContent = `It was ${result} — it matches! Card kept. ${5 - flipIndex} to go.`;
-    renderFlipControls();
-    backOutBtn.hidden = false;
+    liveRegion.textContent = 'It matches! Card kept.';
+    focusTimer = setTimeoutImpl(() => {
+      focusTimer = null;
+      renderFlipControls();
+    }, WIN_PAUSE_MS);
     return { outcome: 'win', pending: pendingWins.length, done: false };
   }
 
@@ -490,9 +563,12 @@ function createRoll({
 
   function clearRollUi() {
     flipPanel.classList.remove('is-visible');
+    flipPanel.classList.remove('is-leaving');
     flipResult.textContent = '';
     resultsEl.hidden = true;
     errorEl.hidden = true;
+    lossEl.classList.remove('is-visible');
+    lossEl.textContent = '';
     flipOrder = [];
     flipIndex = 0;
     pendingWins = [];

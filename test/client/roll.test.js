@@ -442,13 +442,14 @@ test('the flip sequence shows the panel and focuses the active card', async (t) 
 });
 
 test('won cards stay bright while the next card is focused', async (t) => {
-  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
   roll.coverCards();
 
   const firstPos = roll.getFlipOrder()[0];
   roll.setCall('heads');
   await roll.resolveFlip('heads');
+  timers.fireAll();
 
   const secondPos = roll.getFlipOrder()[1];
   const cards = roll.getCards();
@@ -463,6 +464,7 @@ test('won cards stay bright while the next card is focused', async (t) => {
 
   roll.setCall('heads');
   await roll.resolveFlip('heads');
+  timers.fireAll();
 
   const thirdPos = roll.getFlipOrder()[2];
   assert.equal(cards[firstPos].classList.contains('dimmed'), false);
@@ -494,9 +496,13 @@ test('clicking Flip spins the coin and resolves on animationend', async (t) => {
 
   timers.fireAll();
 
-  assert.equal(roll.el.querySelector('.flip-live').textContent, 'Heads.');
+  assert.equal(roll.el.querySelector('.flip-live').textContent, 'It matches! Card kept.');
   assert.equal(roll.getPendingWins().length, 1);
+  assert.equal(coin.classList.contains('show-heads'), true);
   assert.equal(flipBtn.disabled, true);
+
+  timers.fireAll();
+
   assert.equal(coin.classList.contains('show-heads'), false);
 });
 
@@ -513,10 +519,17 @@ test('a coin that settles on tails announces tails and loses the roll', async (t
   timers.fireAll();
 
   assert.equal(coin.classList.contains('show-tails'), true);
-  assert.equal(roll.el.querySelector('.flip-live').textContent, 'Tails.');
+  assert.equal(roll.el.querySelector('.flip-live').textContent, 'Tails — you lost the roll.');
   assert.equal(roll.getState(), 'lost');
   const flipPanel = roll.el.querySelector('.flip-panel');
   assert.equal(flipPanel.classList.contains('is-visible'), false);
+  assert.equal(flipPanel.classList.contains('is-leaving'), true);
+  const lossEl = roll.el.querySelector('.roll-loss');
+  assert.equal(lossEl.classList.contains('is-visible'), true);
+  assert.match(lossEl.textContent, /You lost the roll/);
+  const losingCard = roll.getCards()[roll.getFlipOrder()[0]];
+  assert.equal(losingCard.classList.contains('shake'), true);
+  assert.equal(losingCard.classList.contains('lost-tint'), true);
 });
 
 test('a second Flip press during the coin spin is ignored', async (t) => {
@@ -550,6 +563,62 @@ test('a win reveals the card and records a pending win', async (t) => {
   assert.ok(firstCard.querySelector('.card-inner').querySelector('.card-front').querySelector('img'));
 });
 
+test('a win flashes the card and floats a plus-one badge', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const firstPos = roll.getFlipOrder()[0];
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  const wonCard = roll.getCards()[firstPos];
+  assert.equal(wonCard.classList.contains('win-flash'), true);
+
+  const badge = wonCard.querySelector('.float-badge');
+  assert.ok(badge, 'float badge exists');
+  assert.equal(badge.textContent, '+1');
+
+  badge.dispatchEvent({ type: 'animationend' });
+  assert.equal(wonCard.querySelector('.float-badge'), null);
+});
+
+test('the next card is not focused until the win pause elapses', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  const secondPos = roll.getFlipOrder()[1];
+  const cards = roll.getCards();
+  assert.equal(cards[secondPos].classList.contains('focused'), false);
+  assert.equal(timers.pending()[0], 3000);
+
+  timers.fireAll();
+
+  assert.equal(cards[secondPos].classList.contains('focused'), true);
+});
+
+test('the roll button stays locked briefly after a loss', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  roll.setBalance(10);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  await roll.resolveFlip('tails');
+
+  const button = roll.el.querySelector('button');
+  assert.equal(button.disabled, true);
+  assert.ok(timers.pending().includes(1000), 'loss lockout timer is pending');
+
+  timers.fireAll();
+
+  assert.equal(button.disabled, false);
+});
+
 test('a loss erases pending wins and ends the roll', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
@@ -565,7 +634,7 @@ test('a loss erases pending wins and ends the roll', async (t) => {
   assert.equal(outcome.outcome, 'loss');
   assert.equal(roll.getState(), 'lost');
   assert.equal(roll.getPendingWins().length, 0);
-  assert.match(roll.el.querySelector('.flip-result').textContent, /lost the roll/);
+  assert.match(roll.el.querySelector('.roll-loss').textContent, /You lost the roll/);
 });
 
 test('backing out banks the pending wins and shows only banked images', async (t) => {
