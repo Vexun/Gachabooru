@@ -51,6 +51,7 @@ function createRoll({
 
   const button = document.createElement('button');
   button.type = 'button';
+  button.className = 'roll-button';
   button.textContent = 'Roll';
   button.disabled = true;
 

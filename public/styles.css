@@ -111,7 +111,7 @@ body.mode-hero .roll {
   width: 100%;
 }
 
-body.mode-hero .roll button {
+body.mode-hero .roll-button {
   font-size: 1.25rem;
   padding: 0.75rem 2.5rem;
   align-self: center;
@@ -126,7 +126,7 @@ body.mode-hero .roll-results {
 }
 
 body.mode-rolling .banner-picker,
-body.mode-rolling .roll button {
+body.mode-rolling .roll-button {
   display: none;
 }
 

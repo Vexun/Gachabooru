@@ -108,6 +108,11 @@ test('styles.css staggers the slide-in with a compound selector', () => {
   assert.doesNotMatch(STYLES_CSS, /\.card:nth-child\(\d+\) \.card\.entering/);
 });
 
+test('styles.css hides only the main roll button during rolling', () => {
+  assert.match(STYLES_CSS, /body\.mode-rolling \.roll-button\s*\{/);
+  assert.doesNotMatch(STYLES_CSS, /body\.mode-rolling \.roll button/);
+});
+
 test('createApp wires the picker, roll, and close detection', async () => {
   const { doc, status, banner, roll } = appDocument();
 
