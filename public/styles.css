@@ -211,13 +211,18 @@ main {
 }
 
 .flip-panel {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
   border-radius: 8px;
   background: var(--panel);
+}
+
+.flip-panel.is-visible {
+  display: flex;
+  animation: panelSlideUp 0.3s ease;
 }
 
 .flip-status {
@@ -444,6 +449,64 @@ main {
   box-shadow: 0 0 8px rgba(192, 192, 192, 0.4);
 }
 
+.card.focused {
+  transform: scale(1.08);
+  box-shadow: 0 0 16px var(--accent);
+  z-index: 2;
+}
+
+.card.dimmed {
+  opacity: 0.4;
+}
+
+.coin-container {
+  width: 64px;
+  height: 64px;
+  perspective: 200px;
+}
+
+.coin {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.coin-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.coin-heads {
+  background: #f0c040;
+  color: #332200;
+}
+
+.coin-tails {
+  background: #c0c0c0;
+  color: #1a1a1a;
+  transform: rotateX(180deg);
+}
+
+.coin.flipping {
+  animation: coinFlip 0.8s ease-in-out;
+  will-change: transform;
+}
+
+.coin.show-heads {
+  transform: rotateX(0deg);
+}
+
+.coin.show-tails {
+  transform: rotateX(180deg);
+}
+
 @keyframes cardSlideIn {
   from { opacity: 0; transform: translateX(100vw); }
   to   { opacity: 1; transform: translateX(0); }
@@ -452,6 +515,16 @@ main {
 @keyframes goldPulse {
   0%, 100% { box-shadow: 0 0 4px rgba(255, 215, 0, 0.3); }
   50%      { box-shadow: 0 0 16px rgba(255, 215, 0, 0.6); }
+}
+
+@keyframes coinFlip {
+  from { transform: rotateX(0); }
+  to   { transform: rotateX(1800deg); }
+}
+
+@keyframes panelSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

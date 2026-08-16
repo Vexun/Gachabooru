@@ -496,6 +496,43 @@ Slice 2.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm the
    slide-in and flips happen instantly.
 
+## Play Page Overhaul — Slice 3: Coin Flip & Flip Panel Polish
+
+Slice 3 adds a 3D coin that spins when the player flips, highlights the
+active card while dimming the others, and slides the flip panel in. See
+`PRD.md` sections 4.3 and 4.4 and `PLAN.md` Slice 3.
+
+### Automated checks
+
+- `npm test` — Slice 3 adds to `test/client/roll.test.js`:
+  - The flip panel contains a coin with `.coin-heads` and `.coin-tails`
+    faces.
+  - The flip panel shows via the `.is-visible` class, and the active card
+    gets `.focused` while the others get `.dimmed`.
+  - Clicking Flip adds `.flipping` to the coin, disables the flip button,
+    and a second press during the spin is ignored.
+  - Dispatching `animationend` on the coin settles it, announces the face
+    through the `.flip-live` region, and resolves the flip (a win records
+    a pending win; a tails loss ends the roll and hides the panel).
+  - Banking hides the flip panel via the `.is-visible` class.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Roll and play through to the flip sequence.
+4. Confirm the flip panel slides up and the active card scales up with a
+   glow while the other four cards dim.
+5. Click Heads or Tails, then click Flip.
+6. Confirm the coin spins five times and settles on the result face.
+7. Confirm a match keeps the card, shows the next active card, and a
+   mismatch ends the roll and hides the panel.
+8. Confirm the coin result is announced to screen readers.
+9. Enable `prefers-reduced-motion` in the OS settings and confirm the
+   coin flip is instant.
+
+
 
 
 

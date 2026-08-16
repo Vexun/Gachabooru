@@ -411,6 +411,92 @@ test('calling heads or tails arms the flip button', async (t) => {
   assert.match(roll.el.textContent, /You called heads/);
 });
 
+test('the flip panel contains a coin with heads and tails faces', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  assert.ok(coin, 'coin exists');
+  assert.ok(coin.querySelector('.coin-heads'));
+  assert.ok(coin.querySelector('.coin-tails'));
+  assert.equal(coin.classList.contains('show-heads'), false);
+  assert.equal(coin.classList.contains('show-tails'), false);
+});
+
+test('the flip sequence shows the panel and focuses the active card', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const flipPanel = roll.el.querySelector('.flip-panel');
+  assert.equal(flipPanel.classList.contains('is-visible'), true);
+
+  const firstPos = roll.getFlipOrder()[0];
+  const cards = roll.getCards();
+  for (let i = 0; i < cards.length; i++) {
+    const dimmed = i !== firstPos;
+    assert.equal(cards[i].classList.contains('focused'), !dimmed, `card ${i} focused`);
+    assert.equal(cards[i].classList.contains('dimmed'), dimmed, `card ${i} dimmed`);
+  }
+});
+
+test('clicking Flip spins the coin and resolves on animationend', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const flipBtn = roll.el.querySelector('.flip-button');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  flipBtn.click();
+
+  assert.equal(coin.classList.contains('flipping'), true);
+  assert.equal(flipBtn.disabled, true);
+  assert.equal(roll.getPendingWins().length, 0);
+
+  coin.dispatchEvent({ type: 'animationend' });
+
+  assert.equal(coin.classList.contains('flipping'), false);
+  assert.equal(roll.el.querySelector('.flip-live').textContent, 'Heads.');
+  assert.equal(roll.getPendingWins().length, 1);
+  assert.equal(flipBtn.disabled, true);
+  assert.equal(coin.classList.contains('show-heads'), false);
+});
+
+test('a coin that settles on tails announces tails and loses the roll', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const flipBtn = roll.el.querySelector('.flip-button');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  flipBtn.click();
+  coin.dispatchEvent({ type: 'animationend' });
+
+  assert.equal(coin.classList.contains('show-tails'), true);
+  assert.equal(roll.el.querySelector('.flip-live').textContent, 'Tails.');
+  assert.equal(roll.getState(), 'lost');
+  const flipPanel = roll.el.querySelector('.flip-panel');
+  assert.equal(flipPanel.classList.contains('is-visible'), false);
+});
+
+test('a second Flip press during the coin spin is ignored', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const flipBtn = roll.el.querySelector('.flip-button');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  flipBtn.click();
+  flipBtn.click();
+
+  assert.equal(roll.getPendingWins().length, 0);
+  assert.equal(coin.classList.contains('flipping'), true);
+});
+
 test('a win reveals the card and records a pending win', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
@@ -485,11 +571,11 @@ test('banking hides the flip panel', async (t) => {
   await roll.resolveFlip('heads');
 
   const flipPanel = roll.el.querySelector('.flip-panel');
-  assert.equal(flipPanel.hidden, false);
+  assert.equal(flipPanel.classList.contains('is-visible'), true);
 
   await roll.bankPending();
 
-  assert.equal(flipPanel.hidden, true);
+  assert.equal(flipPanel.classList.contains('is-visible'), false);
 });
 
 test('a second back-out press does not wipe the results', async (t) => {

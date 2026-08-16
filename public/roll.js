@@ -27,6 +27,7 @@ function createRoll({
   const SLIDE_STEP_MS = 80;
   const SLIDE_DURATION_MS = 600;
   const FLIP_DURATION_MS = 600;
+  const COIN_DURATION_MS = 800;
   const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
@@ -53,7 +54,6 @@ function createRoll({
 
   const flipPanel = document.createElement('div');
   flipPanel.className = 'flip-panel';
-  flipPanel.hidden = true;
 
   const flipStatus = document.createElement('div');
   flipStatus.className = 'flip-status';
@@ -87,7 +87,30 @@ function createRoll({
   liveRegion.className = 'flip-live sr-only';
   liveRegion.setAttribute('aria-live', 'polite');
 
-  flipPanel.append(flipStatus, callHeads, callTails, flipBtn, backOutBtn, flipResult, liveRegion);
+  const coinContainer = document.createElement('div');
+  coinContainer.className = 'coin-container';
+  coinContainer.setAttribute('aria-hidden', 'true');
+  const coin = document.createElement('div');
+  coin.className = 'coin';
+  const headsFace = document.createElement('div');
+  headsFace.className = 'coin-face coin-heads';
+  headsFace.textContent = 'H';
+  const tailsFace = document.createElement('div');
+  tailsFace.className = 'coin-face coin-tails';
+  tailsFace.textContent = 'T';
+  coin.append(headsFace, tailsFace);
+  coinContainer.append(coin);
+
+  flipPanel.append(
+    flipStatus,
+    coinContainer,
+    callHeads,
+    callTails,
+    flipBtn,
+    backOutBtn,
+    flipResult,
+    liveRegion,
+  );
 
   const resultsEl = document.createElement('div');
   resultsEl.className = 'roll-results';
@@ -102,6 +125,8 @@ function createRoll({
   let coverTimer = null;
   let entranceTimer = null;
   let flipTimer = null;
+  let coinTimer = null;
+  let flipping = false;
   let rollSeq = 0;
   let flipOrder = [];
   let flipIndex = 0;
@@ -267,6 +292,7 @@ function createRoll({
 
   function cancelCover() {
     rollSeq += 1;
+    flipping = false;
     if (coverTimer) {
       clearTimeoutImpl(coverTimer);
       coverTimer = null;
@@ -279,6 +305,10 @@ function createRoll({
       clearTimeoutImpl(flipTimer);
       flipTimer = null;
     }
+    if (coinTimer) {
+      clearTimeoutImpl(coinTimer);
+      coinTimer = null;
+    }
   }
 
   function beginFlips() {
@@ -289,14 +319,66 @@ function createRoll({
     renderFlipControls();
   }
 
+  function focusCard(pos) {
+    for (const card of cards) {
+      card.classList.add('dimmed');
+    }
+    const active = cards[pos];
+    if (active) {
+      active.classList.remove('dimmed');
+      active.classList.add('focused');
+    }
+  }
+
+  function unfocusCards() {
+    for (const card of cards) {
+      card.classList.remove('focused');
+      card.classList.remove('dimmed');
+    }
+  }
+
   function renderFlipControls() {
-    flipPanel.hidden = false;
+    flipPanel.classList.add('is-visible');
     flipResult.textContent = '';
+    flipping = false;
+    if (coinTimer) {
+      clearTimeoutImpl(coinTimer);
+      coinTimer = null;
+    }
+    coin.classList.remove('show-heads');
+    coin.classList.remove('show-tails');
     callHeads.disabled = false;
     callTails.disabled = false;
     flipBtn.disabled = true;
     backOutBtn.hidden = pendingWins.length === 0;
     flipStatus.textContent = `Card ${flipOrder[flipIndex] + 1}: call heads or tails`;
+    unfocusCards();
+    focusCard(flipOrder[flipIndex]);
+  }
+
+  function animateCoin(result, callback) {
+    if (flipping) {
+      return;
+    }
+    flipping = true;
+    flipBtn.disabled = true;
+    coin.classList.add('flipping');
+    const onDone = () => {
+      if (!flipping) {
+        return;
+      }
+      flipping = false;
+      if (coinTimer) {
+        clearTimeoutImpl(coinTimer);
+        coinTimer = null;
+      }
+      coin.classList.remove('flipping');
+      coin.classList.add(result === 'heads' ? 'show-heads' : 'show-tails');
+      liveRegion.textContent = result === 'heads' ? 'Heads.' : 'Tails.';
+      callback();
+    };
+    coin.addEventListener('animationend', onDone, { once: true });
+    coinTimer = setTimeoutImpl(onDone, COIN_DURATION_MS + FALLBACK_BUFFER_MS);
   }
 
   function setCall(side) {
@@ -320,7 +402,7 @@ function createRoll({
     }
     const won = [...pendingWins];
     pendingWins = [];
-    flipPanel.hidden = true;
+    flipPanel.classList.remove('is-visible');
     for (const post of won) {
       try {
         await fetchImpl(`/api/roll/${post.id}`, {
@@ -348,7 +430,7 @@ function createRoll({
     if (result !== call) {
       state = 'lost';
       pendingWins = [];
-      flipPanel.hidden = true;
+      flipPanel.classList.remove('is-visible');
       flipResult.textContent = `It was ${result} — you lost the roll. No images are kept.`;
       renderResults([]);
       return { outcome: 'loss' };
@@ -390,7 +472,7 @@ function createRoll({
   }
 
   function clearRollUi() {
-    flipPanel.hidden = true;
+    flipPanel.classList.remove('is-visible');
     flipResult.textContent = '';
     resultsEl.hidden = true;
     errorEl.hidden = true;
@@ -398,6 +480,7 @@ function createRoll({
     flipIndex = 0;
     pendingWins = [];
     call = null;
+    unfocusCards();
   }
 
   async function requestPool(tag = banner) {
@@ -453,7 +536,7 @@ function createRoll({
   callTails.addEventListener('click', () => setCall('tails'));
   flipBtn.addEventListener('click', () => {
     const result = flipCoin(random());
-    resolveFlip(result);
+    animateCoin(result, () => resolveFlip(result));
   });
   backOutBtn.addEventListener('click', () => {
     bankPending();
