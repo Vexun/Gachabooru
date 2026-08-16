@@ -62,6 +62,11 @@ test('styles.css scaffolds reduced motion and the visually hidden utility', () =
   assert.match(STYLES_CSS, /\.sr-only\s*\{/);
 });
 
+test('styles.css staggers the slide-in with a compound selector', () => {
+  assert.match(STYLES_CSS, /\.card:nth-child\(\d+\)\.entering\s*\{/);
+  assert.doesNotMatch(STYLES_CSS, /\.card:nth-child\(\d+\) \.card\.entering/);
+});
+
 test('createApp wires the picker, roll, and close detection', async () => {
   const { doc, status, banner, roll } = appDocument();
 

@@ -430,11 +430,11 @@ main {
   animation: cardSlideIn 0.6s ease-out backwards;
 }
 
-.card:nth-child(1) .card.entering { animation-delay: 0ms; }
-.card:nth-child(2) .card.entering { animation-delay: 80ms; }
-.card:nth-child(3) .card.entering { animation-delay: 160ms; }
-.card:nth-child(4) .card.entering { animation-delay: 240ms; }
-.card:nth-child(5) .card.entering { animation-delay: 320ms; }
+.card:nth-child(1).entering { animation-delay: 0ms; }
+.card:nth-child(2).entering { animation-delay: 80ms; }
+.card:nth-child(3).entering { animation-delay: 160ms; }
+.card:nth-child(4).entering { animation-delay: 240ms; }
+.card:nth-child(5).entering { animation-delay: 320ms; }
 
 .card.rarity-gold.revealed {
   animation: goldPulse 2s ease-in-out infinite;
