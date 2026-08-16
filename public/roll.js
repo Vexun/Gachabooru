@@ -443,6 +443,7 @@ function createRoll({
     flipStatus.textContent = `Card ${flipOrder[flipIndex] + 1}: call heads or tails`;
     unfocusCards();
     focusCard(flipOrder[flipIndex]);
+    callHeads.focus();
   }
 
   function showFloatBadge(card) {
@@ -503,6 +504,7 @@ function createRoll({
     callHeads.disabled = true;
     callTails.disabled = true;
     flipBtn.disabled = false;
+    flipBtn.focus();
     flipStatus.textContent = `You called ${call}. Flip the coin.`;
   }
 
@@ -558,6 +560,7 @@ function createRoll({
       if (onCelebrateDone) {
         onCelebrateDone();
       }
+      button.focus();
     };
     exitTimer = setTimeoutImpl(() => {
       grid.classList.add('exit-up');
@@ -593,6 +596,7 @@ function createRoll({
       rollLockTimer = setTimeoutImpl(() => {
         rollLockTimer = null;
         setBalance(balance);
+        button.focus();
       }, LOSS_LOCKOUT_MS);
       if (onLost) {
         onLost();

@@ -496,6 +496,52 @@ test('the back-out button fades in only when it first appears', async (t) => {
   assert.equal(backOut.classList.contains('entering'), false);
 });
 
+test('focus moves to the flip panel controls as the sequence advances', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const heads = roll.el.querySelector('.call-heads');
+  const flipBtn = roll.el.querySelector('.flip-button');
+  assert.equal(heads.focused, true);
+
+  roll.setCall('heads');
+  assert.equal(flipBtn.focused, true);
+});
+
+test('focus returns to the roll button after a loss', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  roll.setBalance(10);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('tails');
+
+  const button = roll.el.querySelector('button');
+  assert.equal(button.disabled, true);
+
+  timers.fireAll();
+
+  assert.equal(button.disabled, false);
+  assert.equal(button.focused, true);
+});
+
+test('focus returns to the roll button after banking', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  roll.setBalance(10);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  await roll.bankPending();
+  timers.fireAll();
+  timers.fireAll();
+
+  const button = roll.el.querySelector('button');
+  assert.equal(button.focused, true);
+});
+
 test('the flip panel contains a coin with heads and tails faces', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();

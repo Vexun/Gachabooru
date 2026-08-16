@@ -185,6 +185,10 @@ class FakeElement {
     return this.dispatchEvent({ type: 'click' });
   }
 
+  focus() {
+    this.focused = true;
+  }
+
   matches(selector) {
     return matchesSelector(this, selector);
   }

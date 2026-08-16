@@ -638,6 +638,39 @@ when it is armed. See `PLAN.md` Slice 6.
 7. Enable `prefers-reduced-motion` in the OS settings and confirm the
    presses, pulse, and entrance happen instantly.
 
+## Play Page Overhaul — Slice 7: Integration, Accessibility & Performance
+
+Slice 7 finishes the play page: managed keyboard focus, a visible focus
+outline, and a final documentation pass. See `PLAN.md` Slice 7.
+
+### Automated checks
+
+- `npm test` — Slice 7 adds to `test/client/roll.test.js`:
+  - Focus moves to the Heads button when the flip panel appears, and to
+    the Flip button after a call is made.
+  - Focus returns to the Roll button after a loss lockout and after
+    banking completes.
+  - The full suite passes with no regressions.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Enable `prefers-reduced-motion` in the OS settings and confirm every
+   phase of the flow is instant.
+4. Play the whole flow using only the keyboard: pick a tag, press Enter
+   on Roll, call Heads/Tails, flip, win some, bank. Confirm focus moves
+   to the flip controls and returns to Roll without tabbing through
+   hidden elements, and that a visible focus outline marks the active
+   control.
+5. Resize the window to 320 px, 768 px, and 1920 px. Confirm the page
+   renders and stays playable at each width (at 320 px the cards get
+   narrow but the page scrolls gracefully).
+6. Roll 10 times rapidly. Confirm no cards get stuck, no timers leak,
+   and the balance settles correctly.
+7. Repeat the smoke in a second browser (Chrome, Firefox, or Safari).
+
 ## Play Page Overhaul — Play Page Flow
 
 The play page has three states, driven by classes on `<body>`: `mode-hero`

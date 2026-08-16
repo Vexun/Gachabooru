@@ -112,6 +112,10 @@ do not share collections that contain sensitive material.
 - Tests: `npm test` (`node:test` for the server, a minimal DOM harness
   for the client).
 - Lint: `npm run lint` (`oxlint`).
+- Accessibility: the play page respects the OS-level
+  `prefers-reduced-motion` setting. With it enabled, all animations
+  become instant. Keyboard focus is managed across the roll, flip, and
+  bank phases.
 - Testing instructions: see `TEST.md`.
 
 ## License
