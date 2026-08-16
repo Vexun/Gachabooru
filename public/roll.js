@@ -20,6 +20,10 @@ function createRoll({
   clearTimeout: timerClearTimeout,
   random = Math.random,
   onBanked,
+  onRollStart,
+  onRollFail,
+  onLost,
+  onCelebrateDone,
 }) {
   const setTimeoutImpl = timerSetTimeout || setTimeout;
   const clearTimeoutImpl = timerClearTimeout || clearTimeout;
@@ -32,6 +36,7 @@ function createRoll({
   const WIN_PAUSE_MS = 3000;
   const LOSS_LOCKOUT_MS = 1000;
   const PANEL_SLIDE_MS = 300;
+  const EXIT_MS = 600;
   const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
@@ -137,6 +142,7 @@ function createRoll({
   let focusTimer = null;
   let panelTimer = null;
   let rollLockTimer = null;
+  let exitTimer = null;
   let flipping = false;
   let rollSeq = 0;
   let flipOrder = [];
@@ -336,6 +342,10 @@ function createRoll({
       clearTimeoutImpl(rollLockTimer);
       rollLockTimer = null;
     }
+    if (exitTimer) {
+      clearTimeoutImpl(exitTimer);
+      exitTimer = null;
+    }
   }
 
   function beginFlips() {
@@ -488,6 +498,25 @@ function createRoll({
     if (onBanked) {
       onBanked();
     }
+    grid.classList.add('exit-up');
+    resultsEl.classList.add('exit-down');
+    let done = false;
+    const onExitDone = () => {
+      if (done) {
+        return;
+      }
+      done = true;
+      if (exitTimer) {
+        clearTimeoutImpl(exitTimer);
+        exitTimer = null;
+      }
+      if (onCelebrateDone) {
+        onCelebrateDone();
+      }
+    };
+    grid.addEventListener('animationend', onExitDone, { once: true });
+    resultsEl.addEventListener('animationend', onExitDone, { once: true });
+    exitTimer = setTimeoutImpl(onExitDone, EXIT_MS + FALLBACK_BUFFER_MS);
     return won;
   }
 
@@ -516,6 +545,9 @@ function createRoll({
         rollLockTimer = null;
         setBalance(balance);
       }, LOSS_LOCKOUT_MS);
+      if (onLost) {
+        onLost();
+      }
       return { outcome: 'loss' };
     }
     revealCard(pos);
@@ -564,6 +596,8 @@ function createRoll({
   function clearRollUi() {
     flipPanel.classList.remove('is-visible');
     flipPanel.classList.remove('is-leaving');
+    grid.classList.remove('exit-up');
+    resultsEl.classList.remove('exit-down');
     flipResult.textContent = '';
     resultsEl.hidden = true;
     errorEl.hidden = true;
@@ -605,18 +639,27 @@ function createRoll({
   }
 
   async function startRoll() {
+    if (onRollStart) {
+      onRollStart();
+    }
     errorEl.hidden = true;
     cancelCover();
     clearRollUi();
     try {
       const nextPosts = await requestPool();
       if (!nextPosts) {
+        if (onRollFail) {
+          onRollFail();
+        }
         return null;
       }
       renderCards(nextPosts);
       return nextPosts;
     } catch (err) {
       showError(`Network error: ${err.message}`);
+      if (onRollFail) {
+        onRollFail();
+      }
       return null;
     }
   }

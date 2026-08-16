@@ -57,6 +57,47 @@ test('index.html loads the confetti vendor script before app.js', () => {
   assert.ok(vendor < app, 'the vendor script loads before app.js');
 });
 
+test('index.html declares the hero section and the default hero mode', () => {
+  assert.match(INDEX_HTML, /<body class="mode-hero">/);
+  assert.match(INDEX_HTML, /id="hero-section"/);
+  assert.match(INDEX_HTML, /hero-title/);
+  assert.match(INDEX_HTML, /hero-message/);
+});
+
+test('createApp switches play page modes on roll callbacks', async () => {
+  const { doc } = appDocument();
+  let captured = null;
+  const app = createApp({
+    document: doc,
+    fetch: async () => ({ ok: true, json: async () => ({ ok: true }) }),
+    createBannerPicker: () => ({ el: doc.createElement('div'), setBanner: () => {} }),
+    createRoll: (options) => {
+      captured = options;
+      return {
+        el: doc.createElement('div'),
+        setBanner: () => {},
+        loadBalance: () => {},
+      };
+    },
+  });
+
+  await app.init();
+  assert.equal(doc.body.classList.contains('mode-hero'), true);
+
+  captured.onRollStart();
+  assert.equal(doc.body.classList.contains('mode-rolling'), true);
+  assert.equal(doc.body.classList.contains('mode-hero'), false);
+
+  captured.onLost();
+  assert.equal(doc.body.classList.contains('mode-top'), true);
+
+  captured.onCelebrateDone();
+  assert.equal(doc.body.classList.contains('mode-hero'), true);
+
+  captured.onRollFail();
+  assert.equal(doc.body.classList.contains('mode-hero'), true);
+});
+
 test('styles.css scaffolds reduced motion and the visually hidden utility', () => {
   assert.match(STYLES_CSS, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(STYLES_CSS, /\.sr-only\s*\{/);

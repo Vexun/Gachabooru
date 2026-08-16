@@ -619,6 +619,128 @@ test('the roll button stays locked briefly after a loss', async (t) => {
   assert.equal(button.disabled, false);
 });
 
+test('startRoll fires onRollStart and onRollFail on a blocked pool', async (t) => {
+  let started = 0;
+  let failed = 0;
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  const roll = createRoll({
+    document: doc,
+    fetch: async () => ({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'insufficient pool' }),
+    }),
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+    onRollStart: () => {
+      started += 1;
+    },
+    onRollFail: () => {
+      failed += 1;
+    },
+  });
+  t.after(() => roll.destroy());
+  roll.setBanner(banner);
+
+  const posts = await roll.startRoll();
+
+  assert.equal(posts, null);
+  assert.equal(started, 1);
+  assert.equal(failed, 1);
+});
+
+test('a successful roll fires onRollStart but not onRollFail', async (t) => {
+  let started = 0;
+  let failed = 0;
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  const roll = createRoll({
+    document: doc,
+    fetch: fakeFetch({ posts: fivePosts }),
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+    onRollStart: () => {
+      started += 1;
+    },
+    onRollFail: () => {
+      failed += 1;
+    },
+  });
+  t.after(() => roll.destroy());
+  roll.setBanner(banner);
+
+  const posts = await roll.startRoll();
+
+  assert.equal(posts.length, 5);
+  assert.equal(started, 1);
+  assert.equal(failed, 0);
+});
+
+test('a loss fires the onLost callback', async (t) => {
+  let lost = 0;
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  const roll = createRoll({
+    document: doc,
+    fetch: fakeFetch({ posts: fivePosts }),
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+    random: () => 0,
+    onLost: () => {
+      lost += 1;
+    },
+  });
+  t.after(() => roll.destroy());
+  roll.setBanner(banner);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('tails');
+
+  assert.equal(lost, 1);
+});
+
+test('banking animates the cards out and fires onCelebrateDone', async (t) => {
+  let celebrated = 0;
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  const roll = createRoll({
+    document: doc,
+    fetch: fakeFetch({ posts: fivePosts }),
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+    random: () => 0,
+    onCelebrateDone: () => {
+      celebrated += 1;
+    },
+  });
+  t.after(() => roll.destroy());
+  roll.setBanner(banner);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  const grid = roll.el.querySelector('.roll-grid');
+  const results = roll.el.querySelector('.roll-results');
+  assert.equal(grid.classList.contains('exit-up'), false);
+
+  await roll.bankPending();
+
+  assert.equal(grid.classList.contains('exit-up'), true);
+  assert.equal(results.classList.contains('exit-down'), true);
+  assert.equal(celebrated, 0);
+
+  timers.fireAll();
+
+  assert.equal(celebrated, 1);
+
+  await roll.startRoll();
+  assert.equal(grid.classList.contains('exit-up'), false);
+  assert.equal(results.classList.contains('exit-down'), false);
+});
+
 test('a loss erases pending wins and ends the roll', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();

@@ -12,6 +12,14 @@ function createApp({
   const bannerSection = document.getElementById('banner-section');
   const rollSection = document.getElementById('roll-section');
   const gameState = { banner: null };
+  const MODES = ['hero', 'rolling', 'top'];
+
+  function setMode(mode) {
+    for (const name of MODES) {
+      document.body.classList.remove(`mode-${name}`);
+    }
+    document.body.classList.add(`mode-${mode}`);
+  }
 
   async function refreshStatus() {
     try {
@@ -48,7 +56,14 @@ function createApp({
     if (!rollSection || !rollFactory) {
       return null;
     }
-    const roll = rollFactory({ document, fetch: fetchImpl });
+    const roll = rollFactory({
+      document,
+      fetch: fetchImpl,
+      onRollStart: () => setMode('rolling'),
+      onRollFail: () => setMode('hero'),
+      onLost: () => setMode('top'),
+      onCelebrateDone: () => setMode('hero'),
+    });
     rollSection.append(roll.el);
     return roll;
   }
@@ -58,6 +73,7 @@ function createApp({
   return {
     state: gameState,
     init: () => {
+      setMode('hero');
       wireBannerPicker();
       if (closeDetection && createWebSocket) {
         closeDetection(createWebSocket);

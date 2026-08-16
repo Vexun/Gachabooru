@@ -576,6 +576,45 @@ Slice 4.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm all
    win/loss animations are instant.
 
+## Play Page Overhaul — Play Page Flow
+
+The play page has three states, driven by classes on `<body>`: `mode-hero`
+(initial and after winning/banking), `mode-rolling` (a roll in progress),
+and `mode-top` (after a loss). The hero shows a centered title, a message
+to search for a tag, the tag search, the balance, and the Roll button.
+
+### Automated checks
+
+- `npm test`:
+  - `test/client/app.test.js` — `index.html` declares the hero section
+    and starts in `mode-hero`; `createApp` switches the body mode from the
+    roll callbacks (`onRollStart` → rolling, `onLost` → top, `onRollFail`
+    and `onCelebrateDone` → hero).
+  - `test/client/roll.test.js` — `startRoll` fires `onRollStart` (and
+    `onRollFail` when the pool is blocked); a loss fires `onLost`; banking
+    adds `exit-up`/`exit-down` to the grid and results and fires
+    `onCelebrateDone` after the exit, with the exit classes stripped on
+    the next roll.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Confirm the idle page shows the centered Gachabooru title, a message
+   to search for a tag, the tag search, the balance, and the Roll button.
+4. Search for a tag and select it. Confirm the chosen tag and the balance
+   show in the hero, and the Roll button becomes enabled.
+5. Click Roll. Confirm the title, search, and Roll button hide and the
+   usual gameplay begins.
+6. Lose a flip. Confirm the loss message plays, then the search and Roll
+   button reappear at the top with the previous search still filled, and
+   the grid stays visible.
+7. Roll again and win all 5 cards (or win some and click Back out & bank).
+   Confirm the cards fade up and the banked results fade down, then the
+   centered hero reappears with the previous search still filled.
+
+
 
 
 
