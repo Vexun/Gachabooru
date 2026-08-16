@@ -36,6 +36,7 @@ function createRoll({
   const WIN_PAUSE_MS = 3000;
   const LOSS_LOCKOUT_MS = 1000;
   const PANEL_SLIDE_MS = 300;
+  const PRESS_MS = 150;
   const EXIT_MS = 600;
   const CELEBRATE_MS = 1200;
   const FALLBACK_BUFFER_MS = 200;
@@ -144,6 +145,7 @@ function createRoll({
   let panelTimer = null;
   let rollLockTimer = null;
   let exitTimer = null;
+  let pressTimer = null;
   let flipping = false;
   let rollSeq = 0;
   let flipOrder = [];
@@ -156,6 +158,12 @@ function createRoll({
     balance = value;
     balanceEl.textContent = `Rolls: ${balance}`;
     button.disabled = !banner || balance < 1;
+  }
+
+  function setRollLoading(loading) {
+    button.classList.toggle('loading', loading);
+    button.textContent = loading ? 'Summoning\u2026' : 'Roll';
+    button.disabled = loading || !banner || balance < 1;
   }
 
   function setBanner(tag) {
@@ -347,6 +355,10 @@ function createRoll({
       clearTimeoutImpl(exitTimer);
       exitTimer = null;
     }
+    if (pressTimer) {
+      clearTimeoutImpl(pressTimer);
+      pressTimer = null;
+    }
   }
 
   function beginFlips() {
@@ -379,6 +391,32 @@ function createRoll({
     }
   }
 
+  function showBackOut(visible) {
+    const wasHidden = backOutBtn.hidden;
+    backOutBtn.hidden = !visible;
+    if (visible) {
+      if (wasHidden) {
+        backOutBtn.classList.add('entering');
+      }
+    } else {
+      backOutBtn.classList.remove('entering');
+    }
+  }
+
+  function flashPress(btn) {
+    callHeads.classList.remove('pressed');
+    callTails.classList.remove('pressed');
+    btn.classList.add('pressed');
+    if (pressTimer) {
+      clearTimeoutImpl(pressTimer);
+    }
+    pressTimer = setTimeoutImpl(() => {
+      pressTimer = null;
+      callHeads.classList.remove('pressed');
+      callTails.classList.remove('pressed');
+    }, PRESS_MS);
+  }
+
   function renderFlipControls() {
     flipPanel.classList.add('is-visible');
     flipPanel.classList.remove('is-leaving');
@@ -401,7 +439,7 @@ function createRoll({
     callHeads.disabled = false;
     callTails.disabled = false;
     flipBtn.disabled = true;
-    backOutBtn.hidden = pendingWins.length === 0;
+    showBackOut(pendingWins.length > 0);
     flipStatus.textContent = `Card ${flipOrder[flipIndex] + 1}: call heads or tails`;
     unfocusCards();
     focusCard(flipOrder[flipIndex]);
@@ -677,6 +715,7 @@ function createRoll({
     errorEl.hidden = true;
     cancelCover();
     clearRollUi();
+    setRollLoading(true);
     if (onRollStart) {
       await onRollStart();
     }
@@ -688,6 +727,7 @@ function createRoll({
     }
     try {
       const nextPosts = await requestPool();
+      setRollLoading(false);
       if (!nextPosts) {
         if (onRollFail) {
           onRollFail();
@@ -697,6 +737,7 @@ function createRoll({
       renderCards(nextPosts);
       return nextPosts;
     } catch (err) {
+      setRollLoading(false);
       showError(`Network error: ${err.message}`);
       if (onRollFail) {
         onRollFail();
@@ -709,14 +750,23 @@ function createRoll({
     cancelCover();
   }
 
-  callHeads.addEventListener('click', () => setCall('heads'));
-  callTails.addEventListener('click', () => setCall('tails'));
+  callHeads.addEventListener('click', () => {
+    flashPress(callHeads);
+    setCall('heads');
+  });
+  callTails.addEventListener('click', () => {
+    flashPress(callTails);
+    setCall('tails');
+  });
   flipBtn.addEventListener('click', () => {
     const result = flipCoin(random());
     animateCoin(result, () => resolveFlip(result));
   });
   backOutBtn.addEventListener('click', () => {
     bankPending();
+  });
+  backOutBtn.addEventListener('animationend', () => {
+    backOutBtn.classList.remove('entering');
   });
   button.addEventListener('click', () => {
     startRoll();

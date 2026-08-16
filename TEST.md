@@ -604,6 +604,40 @@ banked thumbnails enter one after another. See `PLAN.md` Slice 5.
 9. Enable `prefers-reduced-motion` in the OS settings and confirm the
    hold, bounces, and card entrances happen instantly.
 
+## Play Page Overhaul — Slice 6: Button States & Micro-Interactions
+
+Slice 6 polishes every interactive element: the Roll button shows a
+loading state while it fetches the pool, Heads/Tails flash on press, the
+Back-out button fades in on first appearance, and the Flip button pulses
+when it is armed. See `PLAN.md` Slice 6.
+
+### Automated checks
+
+- `npm test` — Slice 6 adds to `test/client/roll.test.js`:
+  - The roll button gets `.loading`, reads "Summoning…", and is disabled
+    during a deferred pool request, then reverts on success.
+  - A blocked pool also clears the loading state.
+  - Clicking Heads adds `.pressed` to that button only and removes it
+    after 150 ms.
+  - The back-out button gains `.entering` only when it first appears, and
+    not again on later rounds.
+  - The Flip button stays disabled during the coin spin (existing test).
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Pick a tag and click Roll. Confirm the button depresses, dims, and
+   reads "Summoning…" while the roll loads.
+4. Reach the flip sequence. Click Heads. Confirm a brief press flash.
+5. Click Flip. Confirm the Flip button pulses softly while armed and stays
+   locked during the coin spin; clicking rapidly flips only once.
+6. Win a card. Confirm the Back-out & bank button fades up once and does
+   not re-animate on the next card.
+7. Enable `prefers-reduced-motion` in the OS settings and confirm the
+   presses, pulse, and entrance happen instantly.
+
 ## Play Page Overhaul — Play Page Flow
 
 The play page has three states, driven by classes on `<body>`: `mode-hero`

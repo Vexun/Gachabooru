@@ -217,6 +217,16 @@ body.hero-leaving .roll-balance {
   cursor: not-allowed;
 }
 
+.roll button:active,
+.flip-panel button:active {
+  transform: scale(0.96);
+}
+
+.roll-button.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .roll-error {
   color: var(--danger);
 }
@@ -334,10 +344,20 @@ body.hero-leaving .roll-balance {
   cursor: not-allowed;
 }
 
+.flip-panel button.pressed {
+  background: var(--accent-2);
+  color: #1a1a24;
+  transform: scale(0.92);
+}
+
 .flip-panel .flip-button {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+.flip-panel .flip-button:not(:disabled) {
+  animation: flipPulse 1.6s ease-in-out infinite;
 }
 
 .flip-panel .back-out {
@@ -345,6 +365,10 @@ body.hero-leaving .roll-balance {
   background: var(--accent-2);
   color: #1a1a24;
   font-weight: 600;
+}
+
+.flip-panel .back-out.entering {
+  animation: panelSlideUp 0.3s ease;
 }
 
 .flip-result {
@@ -746,6 +770,11 @@ body.hero-leaving .roll-balance {
 @keyframes celebrate {
   0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 215, 0, 0); }
   50%      { transform: scale(1.06); box-shadow: 0 0 24px rgba(255, 215, 0, 0.6); }
+}
+
+@keyframes flipPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(124, 108, 240, 0); }
+  50%      { box-shadow: 0 0 12px rgba(124, 108, 240, 0.5); }
 }
 
 @media (prefers-reduced-motion: reduce) {

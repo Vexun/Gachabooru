@@ -346,6 +346,47 @@ test('surfaces a network error in the error area', async (t) => {
   assert.match(errorEl.textContent, /Network error/);
 });
 
+test('the roll button shows a loading state during the pool request', async (t) => {
+  let releasePool = null;
+  const fetchImpl = async () =>
+    new Promise((resolve) => {
+      releasePool = resolve;
+    });
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  const roll = createRoll({
+    document: doc,
+    fetch: fetchImpl,
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+  });
+  t.after(() => roll.destroy());
+  roll.setBanner(banner);
+  roll.setBalance(10);
+
+  const pending = roll.startRoll();
+  const button = roll.el.querySelector('button');
+  assert.equal(button.classList.contains('loading'), true);
+  assert.equal(button.textContent, 'Summoning\u2026');
+  assert.equal(button.disabled, true);
+
+  releasePool({ ok: true, status: 200, json: async () => ({ posts: fivePosts, balance: 9 }) });
+  await pending;
+
+  assert.equal(button.classList.contains('loading'), false);
+  assert.equal(button.textContent, 'Roll');
+  assert.equal(button.disabled, false);
+});
+
+test('the roll button leaves the loading state when the pool is blocked', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ error: 'insufficient pool' }, 409));
+  await roll.startRoll();
+
+  const button = roll.el.querySelector('button');
+  assert.equal(button.classList.contains('loading'), false);
+  assert.equal(button.textContent, 'Roll');
+});
+
 test('a new roll replaces the previous cards and restarts the sequence', async (t) => {
   const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
   roll.setBanner(banner);
@@ -409,6 +450,50 @@ test('calling heads or tails arms the flip button', async (t) => {
   roll.setCall('heads');
   assert.equal(flipBtn.disabled, false);
   assert.match(roll.el.textContent, /You called heads/);
+});
+
+test('clicking heads flashes a pressed state for 150ms', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const heads = roll.el.querySelector('.call-heads');
+  const tails = roll.el.querySelector('.call-tails');
+  heads.click();
+
+  assert.equal(heads.classList.contains('pressed'), true);
+  assert.equal(tails.classList.contains('pressed'), false);
+  assert.deepEqual(timers.pending(), [150]);
+
+  timers.fireAll();
+
+  assert.equal(heads.classList.contains('pressed'), false);
+});
+
+test('the back-out button fades in only when it first appears', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const backOut = roll.el.querySelector('.back-out');
+  assert.equal(backOut.hidden, true);
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  timers.fireAll();
+
+  assert.equal(backOut.hidden, false);
+  assert.equal(backOut.classList.contains('entering'), true);
+
+  backOut.dispatchEvent({ type: 'animationend' });
+  assert.equal(backOut.classList.contains('entering'), false);
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  timers.fireAll();
+
+  assert.equal(backOut.hidden, false);
+  assert.equal(backOut.classList.contains('entering'), false);
 });
 
 test('the flip panel contains a coin with heads and tails faces', async (t) => {
