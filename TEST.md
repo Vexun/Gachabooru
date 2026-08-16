@@ -458,6 +458,45 @@ switches cover/reveal to CSS class toggles. See `PRD.md` section 4.1 and
 7. Enable `prefers-reduced-motion` in the OS settings and confirm the
    cover and reveal happen instantly instead of rotating.
 
+## Play Page Overhaul — Slice 2: Covered Slide-In Reveal
+
+Slice 2 makes the roll cards slide in covered from the right, then flip
+to reveal their images once the images have loaded. Rarity glow shows
+while the fronts are visible. See `PRD.md` sections 4.2 and `PLAN.md`
+Slice 2.
+
+### Automated checks
+
+- `npm test` — Slice 2 adds to `test/client/roll.test.js`:
+  - A roll renders 5 hidden, covered cards while the images load.
+  - Cards gain the `.entering` class only after all images settle; an
+    image that errors also counts as settled.
+  - The sequence runs slide-in, reveal, and cover in order: `.entering`
+    while covered, `.covered` removed and `.revealed` added when shown,
+    then `.revealed` removed again when covered.
+  - `renderCards` maps `post.score` to a rarity class: score at least 100
+    gives `.rarity-gold`, at least 50 gives `.rarity-silver`, otherwise no
+    rarity class. The `.revealed` class gates the glow.
+  - A new roll resets the cards to the hidden, covered state.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Pick a tag and click Roll.
+4. Confirm the cards stay hidden until the images load, then slide in
+   covered from the right, one after another with a staggered delay.
+5. Once in place, confirm the cards flip to show their images.
+6. Roll on a high-score tag and confirm cards with a score of 100 or
+   more show a pulsing gold border and cards with a score of 50 or more
+   show a silver border while the images are visible.
+7. After about 3 seconds, confirm the cards flip back to covered and the
+   flip panel appears.
+8. Enable `prefers-reduced-motion` in the OS settings and confirm the
+   slide-in and flips happen instantly.
+
+
 
 
 

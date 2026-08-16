@@ -14,14 +14,18 @@ function fakeFetch(body, status = 200) {
   });
 }
 
-function post(id) {
-  return {
+function post(id, score) {
+  const p = {
     id,
     file_ext: 'jpg',
     large_file_url: `https://cdn.donmai.us/${id}.jpg`,
     preview_file_url: `https://cdn.donmai.us/preview/${id}.jpg`,
     file_url: `https://cdn.donmai.us/orig/${id}.jpg`,
   };
+  if (score !== undefined) {
+    p.score = score;
+  }
+  return p;
 }
 
 function makeRoll(t, fetchImpl, random = Math.random) {
@@ -53,6 +57,26 @@ function routingFetch({ pool, onBank }) {
 const banner = { value: 'hatsune_miku', label: 'hatsune miku', category: 4, post_count: 100 };
 const fivePosts = [post(1), post(2), post(3), post(4), post(5)];
 
+function imgsOf(roll) {
+  return roll.getCards().map((card) => card.querySelector('.card-front').querySelector('img'));
+}
+
+function settleImages(roll, type = 'load') {
+  for (const img of imgsOf(roll)) {
+    img.dispatchEvent({ type });
+  }
+}
+
+function fireAnimEnd(roll) {
+  const last = roll.getCards()[roll.getCards().length - 1];
+  last.dispatchEvent({ type: 'animationend' });
+}
+
+function fireTransEnd(roll) {
+  const lastInner = roll.getCards()[roll.getCards().length - 1].querySelector('.card-inner');
+  lastInner.dispatchEvent({ type: 'transitionend' });
+}
+
 test('roll button is disabled until a banner is chosen', (t) => {
   const { roll } = makeRoll(t, fakeFetch({ posts: [] }));
   roll.setBalance(10);
@@ -74,36 +98,63 @@ test('the flip panel contains a polite aria-live region', (t) => {
   assert.equal(live.classList.contains('sr-only'), true);
 });
 
-test('requesting a pool renders 5 cards in peek state', async (t) => {
+test('requesting a pool renders 5 hidden covered cards while images load', async (t) => {
   const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
   roll.setBanner(banner);
 
   const posts = await roll.startRoll();
 
   assert.equal(posts.length, 5);
-  assert.equal(roll.getState(), 'peek');
+  assert.equal(roll.getState(), 'loading');
+  assert.equal(timers.count(), 0);
   const cards = roll.el.querySelectorAll('.card');
   assert.equal(cards.length, 5);
   assert.equal(cards[0].dataset.postId, '1');
+  for (const card of cards) {
+    assert.equal(card.classList.contains('covered'), true);
+    assert.equal(card.classList.contains('pre-entry'), true);
+    assert.equal(card.classList.contains('entering'), false);
+  }
   const frontImg = cards[0].querySelector('.card-inner').querySelector('.card-front').querySelector('img');
   assert.equal(frontImg.src, `/api/image?url=${encodeURIComponent('https://cdn.donmai.us/1.jpg')}`);
   assert.equal(frontImg.hidden, false);
-  assert.equal(timers.pending()[0], 3000);
 });
 
-test('cover happens after the peek timer fires', async (t) => {
+test('cards slide in, reveal, glow, then cover through the sequence', async (t) => {
   const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
   roll.setBanner(banner);
 
   await roll.startRoll();
+  settleImages(roll);
+
+  assert.equal(roll.getState(), 'entering');
+  const cards = roll.el.querySelectorAll('.card');
+  for (const card of cards) {
+    assert.equal(card.classList.contains('entering'), true);
+    assert.equal(card.classList.contains('pre-entry'), false);
+    assert.equal(card.classList.contains('covered'), true);
+  }
+
+  fireAnimEnd(roll);
+
+  assert.equal(roll.getState(), 'revealed');
+  for (const card of cards) {
+    assert.equal(card.classList.contains('entering'), false);
+    assert.equal(card.classList.contains('covered'), false);
+    assert.equal(card.classList.contains('revealed'), true);
+  }
+
+  fireTransEnd(roll);
+
   assert.equal(roll.getState(), 'peek');
+  assert.equal(timers.pending()[0], 3000);
 
   timers.fireAll();
 
   assert.equal(roll.getState(), 'covered');
-  const cards = roll.el.querySelectorAll('.card');
   for (const card of cards) {
     assert.equal(card.classList.contains('covered'), true);
+    assert.equal(card.classList.contains('revealed'), false);
   }
 });
 
@@ -128,6 +179,73 @@ test('renderCards builds a two-sided card structure', async (t) => {
     const number = back.querySelector('.card-number');
     assert.ok(number, 'card-back holds a numbered span');
     assert.equal(number.textContent, String(i + 1));
+  }
+});
+
+test('cards gain the entering class only after their images settle', async (t) => {
+  const { roll } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+
+  const cards = roll.el.querySelectorAll('.card');
+  for (const card of cards) {
+    assert.equal(card.classList.contains('entering'), false);
+    assert.equal(card.classList.contains('pre-entry'), true);
+  }
+
+  settleImages(roll);
+
+  for (const card of cards) {
+    assert.equal(card.classList.contains('entering'), true);
+    assert.equal(card.classList.contains('pre-entry'), false);
+  }
+});
+
+test('an errored image also counts as settled', async (t) => {
+  const { roll } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+
+  const imgs = imgsOf(roll);
+  for (const img of imgs.slice(0, 4)) {
+    img.dispatchEvent({ type: 'load' });
+  }
+  imgs[4].dispatchEvent({ type: 'error' });
+
+  assert.equal(roll.getState(), 'entering');
+});
+
+test('renderCards maps the post score to a rarity class', async (t) => {
+  const posts = [
+    post(1, 150),
+    post(2, 100),
+    post(3, 60),
+    post(4, 50),
+    post(5, 12),
+  ];
+  const { roll } = makeRoll(t, fakeFetch({ posts }));
+  roll.setBanner(banner);
+
+  await roll.startRoll();
+
+  const cards = roll.el.querySelectorAll('.card');
+  assert.equal(cards[0].classList.contains('rarity-gold'), true);
+  assert.equal(cards[1].classList.contains('rarity-gold'), true);
+  assert.equal(cards[2].classList.contains('rarity-silver'), true);
+  assert.equal(cards[3].classList.contains('rarity-silver'), true);
+  assert.equal(cards[4].classList.contains('rarity-gold'), false);
+  assert.equal(cards[4].classList.contains('rarity-silver'), false);
+  for (const card of cards) {
+    assert.equal(card.classList.contains('revealed'), false);
+  }
+
+  settleImages(roll);
+  fireAnimEnd(roll);
+
+  for (const card of cards) {
+    assert.equal(card.classList.contains('revealed'), true);
   }
 });
 
@@ -168,6 +286,9 @@ test('the 3D structure survives a peek-cover-reveal cycle', async (t) => {
   roll.setBanner(banner);
 
   await roll.startRoll();
+  settleImages(roll);
+  fireAnimEnd(roll);
+  fireTransEnd(roll);
   timers.fireAll();
   roll.revealCard(0);
 
@@ -185,11 +306,10 @@ test('the 3D structure survives a peek-cover-reveal cycle', async (t) => {
 });
 
 test('covered cards show identical numbered backs', async (t) => {
-  const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
+  const { roll } = makeRoll(t, fakeFetch({ posts: fivePosts }));
   roll.setBanner(banner);
 
   await roll.startRoll();
-  timers.fireAll();
 
   const backs = roll.el.querySelectorAll('.card-back');
   assert.equal(backs.length, 5);
@@ -226,20 +346,25 @@ test('surfaces a network error in the error area', async (t) => {
   assert.match(errorEl.textContent, /Network error/);
 });
 
-test('a new roll replaces the previous cards and restarts the peek', async (t) => {
+test('a new roll replaces the previous cards and restarts the sequence', async (t) => {
   const { roll, timers } = makeRoll(t, fakeFetch({ posts: fivePosts }));
   roll.setBanner(banner);
 
   await roll.startRoll();
+  settleImages(roll);
+  fireAnimEnd(roll);
+  fireTransEnd(roll);
   timers.fireAll();
   assert.equal(roll.getState(), 'covered');
 
   await roll.startRoll();
-  assert.equal(roll.getState(), 'peek');
+  assert.equal(roll.getState(), 'loading');
   const cards = roll.el.querySelectorAll('.card');
   assert.equal(cards.length, 5);
   for (const card of cards) {
-    assert.equal(card.classList.contains('covered'), false);
+    assert.equal(card.classList.contains('covered'), true);
+    assert.equal(card.classList.contains('pre-entry'), true);
+    assert.equal(card.classList.contains('entering'), false);
   }
 });
 
@@ -248,6 +373,9 @@ test('cancelCover clears the pending peek timer', async (t) => {
   roll.setBanner(banner);
 
   await roll.startRoll();
+  settleImages(roll);
+  fireAnimEnd(roll);
+  fireTransEnd(roll);
   assert.equal(timers.count(), 1);
 
   roll.cancelCover();

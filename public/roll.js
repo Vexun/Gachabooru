@@ -24,6 +24,10 @@ function createRoll({
   const setTimeoutImpl = timerSetTimeout || setTimeout;
   const clearTimeoutImpl = timerClearTimeout || clearTimeout;
   const PEEK_MS = 3000;
+  const SLIDE_STEP_MS = 80;
+  const SLIDE_DURATION_MS = 600;
+  const FLIP_DURATION_MS = 600;
+  const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
   root.className = 'roll';
@@ -96,6 +100,9 @@ function createRoll({
   let cards = [];
   let state = 'idle';
   let coverTimer = null;
+  let entranceTimer = null;
+  let flipTimer = null;
+  let rollSeq = 0;
   let flipOrder = [];
   let flipIndex = 0;
   let pendingWins = [];
@@ -121,10 +128,11 @@ function createRoll({
 
   function renderCards(postList) {
     posts = postList;
+    state = 'loading';
     grid.textContent = '';
     cards = posts.map((post, idx) => {
       const card = document.createElement('figure');
-      card.className = 'card';
+      card.className = 'card covered pre-entry';
       card.dataset.postId = String(post.id);
       card.dataset.position = String(idx + 1);
 
@@ -147,9 +155,81 @@ function createRoll({
 
       inner.append(front, back);
       card.append(inner);
+
+      if (post.score >= 100) {
+        card.classList.add('rarity-gold');
+      } else if (post.score >= 50) {
+        card.classList.add('rarity-silver');
+      }
+
       grid.append(card);
       return card;
     });
+    waitForImages();
+  }
+
+  function waitForImages() {
+    const mySeq = ++rollSeq;
+    let settled = 0;
+    const total = cards.length;
+    const images = cards.map((card) => card.querySelector('.card-front').querySelector('img'));
+
+    function settle() {
+      if (mySeq !== rollSeq) {
+        return;
+      }
+      settled += 1;
+      if (settled >= total) {
+        beginEntrance();
+      }
+    }
+
+    for (const img of images) {
+      if (img.complete) {
+        settle();
+        continue;
+      }
+      img.addEventListener('load', settle);
+      img.addEventListener('error', settle);
+    }
+  }
+
+  function beginEntrance() {
+    state = 'entering';
+    for (const card of cards) {
+      card.classList.remove('pre-entry');
+      card.classList.add('entering');
+    }
+    const last = cards[cards.length - 1];
+    const onSlideDone = () => revealCards();
+    last.addEventListener('animationend', onSlideDone, { once: true });
+    const lastStartMs = (cards.length - 1) * SLIDE_STEP_MS;
+    entranceTimer = setTimeoutImpl(
+      onSlideDone,
+      lastStartMs + SLIDE_DURATION_MS + FALLBACK_BUFFER_MS,
+    );
+  }
+
+  function revealCards() {
+    if (state !== 'entering') {
+      return;
+    }
+    state = 'revealed';
+    if (entranceTimer) {
+      clearTimeoutImpl(entranceTimer);
+      entranceTimer = null;
+    }
+    for (const card of cards) {
+      // The slide-in is done; drop `.entering` so removing `.revealed`
+      // later cannot restart the slide-in animation on gold cards.
+      card.classList.remove('entering');
+      card.classList.remove('covered');
+      card.classList.add('revealed');
+    }
+    const lastInner = cards[cards.length - 1].querySelector('.card-inner');
+    const onFlipped = () => beginPeek();
+    lastInner.addEventListener('transitionend', onFlipped, { once: true });
+    flipTimer = setTimeoutImpl(onFlipped, FLIP_DURATION_MS + FALLBACK_BUFFER_MS);
   }
 
   function revealCard(pos) {
@@ -165,12 +245,20 @@ function createRoll({
     coverTimer = null;
     for (let i = 0; i < cards.length; i++) {
       cards[i].classList.add('covered');
+      cards[i].classList.remove('revealed');
     }
     beginFlips();
   }
 
   function beginPeek() {
+    if (state !== 'revealed') {
+      return;
+    }
     state = 'peek';
+    if (flipTimer) {
+      clearTimeoutImpl(flipTimer);
+      flipTimer = null;
+    }
     if (coverTimer) {
       clearTimeoutImpl(coverTimer);
     }
@@ -178,9 +266,18 @@ function createRoll({
   }
 
   function cancelCover() {
+    rollSeq += 1;
     if (coverTimer) {
       clearTimeoutImpl(coverTimer);
       coverTimer = null;
+    }
+    if (entranceTimer) {
+      clearTimeoutImpl(entranceTimer);
+      entranceTimer = null;
+    }
+    if (flipTimer) {
+      clearTimeoutImpl(flipTimer);
+      flipTimer = null;
     }
   }
 
@@ -341,7 +438,6 @@ function createRoll({
         return null;
       }
       renderCards(nextPosts);
-      beginPeek();
       return nextPosts;
     } catch (err) {
       showError(`Network error: ${err.message}`);
