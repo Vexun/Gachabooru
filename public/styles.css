@@ -130,6 +130,14 @@ body.mode-rolling .roll-button {
   display: none;
 }
 
+body.hero-leaving #hero-section,
+body.hero-leaving .banner-picker,
+body.hero-leaving .roll-button,
+body.hero-leaving .roll-balance {
+  animation: heroFadeOut 0.6s ease forwards;
+  pointer-events: none;
+}
+
 .banner-picker {
   display: flex;
   flex-direction: column;
@@ -689,6 +697,11 @@ body.mode-rolling .roll-button {
 @keyframes exitDown {
   from { opacity: 1; transform: translateY(0); }
   to   { opacity: 0; transform: translateY(40px); }
+}
+
+@keyframes heroFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

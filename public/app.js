@@ -7,18 +7,49 @@ function createApp({
   createRoll: rollFactory,
   createWebSocket,
   wireCloseDetection: closeDetection,
+  setTimeout: timerSetTimeout,
+  clearTimeout: timerClearTimeout,
 }) {
+  const setTimeoutImpl = timerSetTimeout || setTimeout;
+  const clearTimeoutImpl = timerClearTimeout || clearTimeout;
+  const HERO_FADE_MS = 600;
+  const HERO_FADE_BUFFER_MS = 200;
   const statusEl = document.getElementById('server-status');
   const bannerSection = document.getElementById('banner-section');
   const rollSection = document.getElementById('roll-section');
   const gameState = { banner: null };
   const MODES = ['hero', 'rolling', 'top'];
+  let heroFadeTimer = null;
 
   function setMode(mode) {
     for (const name of MODES) {
       document.body.classList.remove(`mode-${name}`);
     }
     document.body.classList.add(`mode-${mode}`);
+  }
+
+  function fadeHero() {
+    return new Promise((resolve) => {
+      document.body.classList.add('hero-leaving');
+      let done = false;
+      const finish = () => {
+        if (done) {
+          return;
+        }
+        done = true;
+        if (heroFadeTimer) {
+          clearTimeoutImpl(heroFadeTimer);
+          heroFadeTimer = null;
+        }
+        document.body.classList.remove('hero-leaving');
+        resolve();
+      };
+      const hero = document.getElementById('hero-section');
+      if (hero && hero.addEventListener) {
+        hero.addEventListener('animationend', finish, { once: true });
+      }
+      heroFadeTimer = setTimeoutImpl(finish, HERO_FADE_MS + HERO_FADE_BUFFER_MS);
+    });
   }
 
   async function refreshStatus() {
@@ -59,7 +90,12 @@ function createApp({
     const roll = rollFactory({
       document,
       fetch: fetchImpl,
-      onRollStart: () => setMode('rolling'),
+      onRollStart: async () => {
+        if (document.body.classList.contains('mode-hero')) {
+          await fadeHero();
+        }
+        setMode('rolling');
+      },
       onRollFail: () => setMode('hero'),
       onLost: () => setMode('top'),
       onCelebrateDone: () => setMode('hero'),

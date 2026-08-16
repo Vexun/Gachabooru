@@ -741,6 +741,62 @@ test('banking animates the cards out and fires onCelebrateDone', async (t) => {
   assert.equal(results.classList.contains('exit-down'), false);
 });
 
+test('a re-roll after a loss animates the old cards out first', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('tails');
+  assert.equal(roll.getState(), 'lost');
+
+  const grid = roll.el.querySelector('.roll-grid');
+  assert.equal(grid.querySelectorAll('.card').length, 5);
+
+  const posts = roll.startRoll();
+  assert.equal(grid.classList.contains('exit-up'), true);
+
+  timers.fireAll();
+
+  const result = await posts;
+  assert.equal(result.length, 5);
+  assert.equal(grid.classList.contains('exit-up'), false);
+  assert.equal(grid.querySelectorAll('.card').length, 5);
+});
+
+test('a re-roll clears stale cards before the pool resolves', async (t) => {
+  let releasePool = null;
+  let deferPool = false;
+  const fetchImpl = async (url, opts = {}) => {
+    if (opts.method === 'POST') {
+      return { ok: true, status: 200, json: async () => ({ downloaded: true }) };
+    }
+    if (url.includes('/api/roll/pool') && !deferPool) {
+      return { ok: true, status: 200, json: async () => ({ posts: fivePosts }) };
+    }
+    return new Promise((resolve) => {
+      releasePool = resolve;
+    });
+  };
+  const { roll } = coveredRoll(t, fetchImpl, () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  await roll.bankPending();
+
+  const grid = roll.el.querySelector('.roll-grid');
+  assert.equal(grid.querySelectorAll('.card').length, 5);
+
+  deferPool = true;
+  const posts = roll.startRoll();
+  assert.equal(grid.querySelectorAll('.card').length, 0);
+
+  releasePool({ ok: true, status: 200, json: async () => ({ posts: fivePosts }) });
+  const result = await posts;
+  assert.equal(result.length, 5);
+  assert.equal(grid.querySelectorAll('.card').length, 5);
+});
+
 test('a loss erases pending wins and ends the roll', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();

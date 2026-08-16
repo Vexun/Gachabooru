@@ -605,14 +605,20 @@ to search for a tag, the tag search, the balance, and the Roll button.
    to search for a tag, the tag search, the balance, and the Roll button.
 4. Search for a tag and select it. Confirm the chosen tag and the balance
    show in the hero, and the Roll button becomes enabled.
-5. Click Roll. Confirm the title, search, and Roll button hide and the
-   usual gameplay begins.
+5. Click Roll. Confirm the title, search, balance, and Roll button fade
+   out over about 0.6 seconds, then the usual gameplay begins with no
+   stale cards visible.
 6. Lose a flip. Confirm the loss message plays, then the search and Roll
    button reappear at the top with the previous search still filled, and
    the grid stays visible.
-7. Roll again and win all 5 cards (or win some and click Back out & bank).
+7. Click Roll again after a loss. Confirm the old cards move up and fade
+   out first, then the new cards enter from the side.
+8. Roll again and win all 5 cards (or win some and click Back out & bank).
    Confirm the cards fade up and the banked results fade down, then the
    centered hero reappears with the previous search still filled.
+9. Click Roll from the hero. Confirm the old grid is already cleared (no
+   leftover cards flash) and the hero fades out before the new cards
+   enter.
 
 
 

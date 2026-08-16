@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createDocument } = require('./helpers');
+const { createDocument, fakeTimers } = require('./helpers');
 const { createApp } = require('../../public/app');
 
 const INDEX_HTML = fs.readFileSync(
@@ -66,10 +66,13 @@ test('index.html declares the hero section and the default hero mode', () => {
 
 test('createApp switches play page modes on roll callbacks', async () => {
   const { doc } = appDocument();
+  const timers = fakeTimers();
   let captured = null;
   const app = createApp({
     document: doc,
     fetch: async () => ({ ok: true, json: async () => ({ ok: true }) }),
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
     createBannerPicker: () => ({ el: doc.createElement('div'), setBanner: () => {} }),
     createRoll: (options) => {
       captured = options;
@@ -84,12 +87,20 @@ test('createApp switches play page modes on roll callbacks', async () => {
   await app.init();
   assert.equal(doc.body.classList.contains('mode-hero'), true);
 
-  captured.onRollStart();
+  const heroRoll = captured.onRollStart();
+  assert.equal(doc.body.classList.contains('hero-leaving'), true);
+  assert.equal(doc.body.classList.contains('mode-rolling'), false);
+  timers.fireAll();
+  await heroRoll;
   assert.equal(doc.body.classList.contains('mode-rolling'), true);
-  assert.equal(doc.body.classList.contains('mode-hero'), false);
+  assert.equal(doc.body.classList.contains('hero-leaving'), false);
 
   captured.onLost();
   assert.equal(doc.body.classList.contains('mode-top'), true);
+
+  const topRoll = captured.onRollStart();
+  assert.equal(doc.body.classList.contains('mode-rolling'), true);
+  await topRoll;
 
   captured.onCelebrateDone();
   assert.equal(doc.body.classList.contains('mode-hero'), true);

@@ -639,13 +639,42 @@ function createRoll({
     }
   }
 
+  function exitGridCards() {
+    return new Promise((resolve) => {
+      grid.classList.add('exit-up');
+      let done = false;
+      const finish = () => {
+        if (done) {
+          return;
+        }
+        done = true;
+        if (exitTimer) {
+          clearTimeoutImpl(exitTimer);
+          exitTimer = null;
+        }
+        grid.classList.remove('exit-up');
+        grid.textContent = '';
+        cards = [];
+        resolve();
+      };
+      grid.addEventListener('animationend', finish, { once: true });
+      exitTimer = setTimeoutImpl(finish, EXIT_MS + FALLBACK_BUFFER_MS);
+    });
+  }
+
   async function startRoll() {
-    if (onRollStart) {
-      onRollStart();
-    }
     errorEl.hidden = true;
     cancelCover();
     clearRollUi();
+    if (onRollStart) {
+      await onRollStart();
+    }
+    if (state === 'lost' && grid.children.length > 0) {
+      await exitGridCards();
+    } else {
+      grid.textContent = '';
+      cards = [];
+    }
     try {
       const nextPosts = await requestPool();
       if (!nextPosts) {
