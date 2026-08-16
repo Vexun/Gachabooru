@@ -50,11 +50,8 @@ test('index.html loads the client scripts in dependency order', () => {
   assert.ok(app > roll, 'app.js loads last');
 });
 
-test('index.html loads the confetti vendor script before app.js', () => {
-  const vendor = INDEX_HTML.indexOf('vendor/confetti.browser.min.js');
-  const app = INDEX_HTML.indexOf('app.js');
-  assert.ok(vendor >= 0, 'vendor/confetti.browser.min.js is included');
-  assert.ok(vendor < app, 'the vendor script loads before app.js');
+test('index.html does not load any vendor scripts', () => {
+  assert.doesNotMatch(INDEX_HTML, /confetti/);
 });
 
 test('index.html declares the hero section and the default hero mode', () => {
