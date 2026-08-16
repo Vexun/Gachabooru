@@ -508,12 +508,15 @@ active card while dimming the others, and slides the flip panel in. See
   - The flip panel contains a coin with `.coin-heads` and `.coin-tails`
     faces.
   - The flip panel shows via the `.is-visible` class, and the active card
-    gets `.focused` while the others get `.dimmed`.
+    gets `.focused` while the other covered cards get `.dimmed`.
+  - Won cards stay bright (no `.dimmed`, no `.focused`) while the next
+    card is focused.
   - Clicking Flip adds `.flipping` to the coin, disables the flip button,
     and a second press during the spin is ignored.
-  - Dispatching `animationend` on the coin settles it, announces the face
-    through the `.flip-live` region, and resolves the flip (a win records
-    a pending win; a tails loss ends the roll and hides the panel).
+  - Dispatching `animationend` on the coin settles it, waits for the
+    resolution pause, then announces the face through the `.flip-live`
+    region and resolves the flip (a win records a pending win; a tails
+    loss ends the roll and hides the panel).
   - Banking hides the flip panel via the `.is-visible` class.
 - `npm run lint` — clean output.
 
@@ -523,14 +526,18 @@ active card while dimming the others, and slides the flip panel in. See
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Roll and play through to the flip sequence.
 4. Confirm the flip panel slides up and the active card scales up with a
-   glow while the other four cards dim.
+   glow while the other covered cards dim.
 5. Click Heads or Tails, then click Flip.
-6. Confirm the coin spins five times and settles on the result face.
-7. Confirm a match keeps the card, shows the next active card, and a
-   mismatch ends the roll and hides the panel.
-8. Confirm the coin result is announced to screen readers.
-9. Enable `prefers-reduced-motion` in the OS settings and confirm the
-   coin flip is instant.
+6. Confirm the coin spins fast, decelerates visibly, and settles on the
+   result face.
+7. Confirm the coin holds on the settled face for about half a second,
+   then the outcome lands: the card reveals and the result text appears.
+8. Win two cards and confirm both won images stay bright while the next
+   card is focused.
+9. Confirm a mismatch ends the roll and hides the panel.
+10. Confirm the coin result is announced to screen readers.
+11. Enable `prefers-reduced-motion` in the OS settings and confirm the
+    coin flip is instant.
 
 
 

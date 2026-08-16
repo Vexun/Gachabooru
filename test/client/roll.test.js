@@ -441,8 +441,37 @@ test('the flip sequence shows the panel and focuses the active card', async (t) 
   }
 });
 
-test('clicking Flip spins the coin and resolves on animationend', async (t) => {
+test('won cards stay bright while the next card is focused', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const firstPos = roll.getFlipOrder()[0];
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  const secondPos = roll.getFlipOrder()[1];
+  const cards = roll.getCards();
+  assert.equal(cards[firstPos].classList.contains('dimmed'), false);
+  assert.equal(cards[firstPos].classList.contains('focused'), false);
+  assert.equal(cards[secondPos].classList.contains('focused'), true);
+  for (let i = 0; i < cards.length; i++) {
+    const won = i === firstPos;
+    const active = i === secondPos;
+    assert.equal(cards[i].classList.contains('dimmed'), !won && !active, `card ${i} dimmed`);
+  }
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  const thirdPos = roll.getFlipOrder()[2];
+  assert.equal(cards[firstPos].classList.contains('dimmed'), false);
+  assert.equal(cards[secondPos].classList.contains('dimmed'), false);
+  assert.equal(cards[thirdPos].classList.contains('focused'), true);
+});
+
+test('clicking Flip spins the coin and resolves on animationend', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
   roll.coverCards();
 
@@ -458,6 +487,13 @@ test('clicking Flip spins the coin and resolves on animationend', async (t) => {
   coin.dispatchEvent({ type: 'animationend' });
 
   assert.equal(coin.classList.contains('flipping'), false);
+  assert.equal(coin.classList.contains('show-heads'), true);
+  assert.equal(roll.el.querySelector('.flip-live').textContent, '');
+  assert.equal(roll.getPendingWins().length, 0);
+  assert.equal(timers.pending()[0], 500);
+
+  timers.fireAll();
+
   assert.equal(roll.el.querySelector('.flip-live').textContent, 'Heads.');
   assert.equal(roll.getPendingWins().length, 1);
   assert.equal(flipBtn.disabled, true);
@@ -465,7 +501,7 @@ test('clicking Flip spins the coin and resolves on animationend', async (t) => {
 });
 
 test('a coin that settles on tails announces tails and loses the roll', async (t) => {
-  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
   await roll.startRoll();
   roll.coverCards();
 
@@ -474,6 +510,7 @@ test('a coin that settles on tails announces tails and loses the roll', async (t
   const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
   flipBtn.click();
   coin.dispatchEvent({ type: 'animationend' });
+  timers.fireAll();
 
   assert.equal(coin.classList.contains('show-tails'), true);
   assert.equal(roll.el.querySelector('.flip-live').textContent, 'Tails.');

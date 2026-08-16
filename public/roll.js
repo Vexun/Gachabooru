@@ -28,6 +28,7 @@ function createRoll({
   const SLIDE_DURATION_MS = 600;
   const FLIP_DURATION_MS = 600;
   const COIN_DURATION_MS = 800;
+  const RESOLVE_DELAY_MS = 500;
   const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
@@ -126,6 +127,7 @@ function createRoll({
   let entranceTimer = null;
   let flipTimer = null;
   let coinTimer = null;
+  let resolveTimer = null;
   let flipping = false;
   let rollSeq = 0;
   let flipOrder = [];
@@ -309,6 +311,10 @@ function createRoll({
       clearTimeoutImpl(coinTimer);
       coinTimer = null;
     }
+    if (resolveTimer) {
+      clearTimeoutImpl(resolveTimer);
+      resolveTimer = null;
+    }
   }
 
   function beginFlips() {
@@ -320,12 +326,16 @@ function createRoll({
   }
 
   function focusCard(pos) {
-    for (const card of cards) {
-      card.classList.add('dimmed');
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      if (card.classList.contains('covered') && i !== pos) {
+        card.classList.add('dimmed');
+      } else {
+        card.classList.remove('dimmed');
+      }
     }
     const active = cards[pos];
     if (active) {
-      active.classList.remove('dimmed');
       active.classList.add('focused');
     }
   }
@@ -345,6 +355,10 @@ function createRoll({
       clearTimeoutImpl(coinTimer);
       coinTimer = null;
     }
+    if (resolveTimer) {
+      clearTimeoutImpl(resolveTimer);
+      resolveTimer = null;
+    }
     coin.classList.remove('show-heads');
     coin.classList.remove('show-tails');
     callHeads.disabled = false;
@@ -363,7 +377,7 @@ function createRoll({
     flipping = true;
     flipBtn.disabled = true;
     coin.classList.add('flipping');
-    const onDone = () => {
+    const onSettled = () => {
       if (!flipping) {
         return;
       }
@@ -374,11 +388,14 @@ function createRoll({
       }
       coin.classList.remove('flipping');
       coin.classList.add(result === 'heads' ? 'show-heads' : 'show-tails');
-      liveRegion.textContent = result === 'heads' ? 'Heads.' : 'Tails.';
-      callback();
+      resolveTimer = setTimeoutImpl(() => {
+        resolveTimer = null;
+        liveRegion.textContent = result === 'heads' ? 'Heads.' : 'Tails.';
+        callback();
+      }, RESOLVE_DELAY_MS);
     };
-    coin.addEventListener('animationend', onDone, { once: true });
-    coinTimer = setTimeoutImpl(onDone, COIN_DURATION_MS + FALLBACK_BUFFER_MS);
+    coin.addEventListener('animationend', onSettled, { once: true });
+    coinTimer = setTimeoutImpl(onSettled, COIN_DURATION_MS + FALLBACK_BUFFER_MS);
   }
 
   function setCall(side) {
