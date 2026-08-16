@@ -37,6 +37,7 @@ function createRoll({
   const LOSS_LOCKOUT_MS = 1000;
   const PANEL_SLIDE_MS = 300;
   const EXIT_MS = 600;
+  const CELEBRATE_MS = 1200;
   const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
@@ -124,7 +125,6 @@ function createRoll({
 
   const resultsEl = document.createElement('div');
   resultsEl.className = 'roll-results';
-  resultsEl.hidden = true;
 
   const lossEl = document.createElement('div');
   lossEl.className = 'roll-loss';
@@ -496,11 +496,17 @@ function createRoll({
     }
     state = 'banked';
     renderResults(won);
+    const noun = won.length === 1 ? 'image' : 'images';
+    liveRegion.textContent = `You kept ${won.length} ${noun}.`;
     if (onBanked) {
       onBanked();
     }
-    grid.classList.add('exit-up');
-    resultsEl.classList.add('exit-down');
+    for (const post of won) {
+      const idx = posts.indexOf(post);
+      if (idx !== -1) {
+        cards[idx].classList.add('celebrating');
+      }
+    }
     let done = false;
     const onExitDone = () => {
       if (done) {
@@ -515,9 +521,13 @@ function createRoll({
         onCelebrateDone();
       }
     };
-    grid.addEventListener('animationend', onExitDone, { once: true });
-    resultsEl.addEventListener('animationend', onExitDone, { once: true });
-    exitTimer = setTimeoutImpl(onExitDone, EXIT_MS + FALLBACK_BUFFER_MS);
+    exitTimer = setTimeoutImpl(() => {
+      grid.classList.add('exit-up');
+      resultsEl.classList.add('exit-down');
+      grid.addEventListener('animationend', onExitDone, { once: true });
+      resultsEl.addEventListener('animationend', onExitDone, { once: true });
+      exitTimer = setTimeoutImpl(onExitDone, EXIT_MS + FALLBACK_BUFFER_MS);
+    }, CELEBRATE_MS);
     return won;
   }
 
@@ -574,6 +584,7 @@ function createRoll({
   function renderResults(banked) {
     resultsEl.textContent = '';
     const heading = document.createElement('h2');
+    heading.className = 'heading-bounce';
     const noun = banked.length === 1 ? 'image' : 'images';
     heading.textContent = `You kept ${banked.length} ${noun}`;
     resultsEl.append(heading);
@@ -582,7 +593,7 @@ function createRoll({
       resultGrid.className = 'roll-grid';
       for (const post of banked) {
         const card = document.createElement('figure');
-        card.className = 'card';
+        card.className = 'card entering';
         const img = document.createElement('img');
         img.src = imgSrc(post.large_file_url || post.file_url);
         img.alt = `post ${post.id}`;
@@ -591,7 +602,7 @@ function createRoll({
       }
       resultsEl.append(resultGrid);
     }
-    resultsEl.hidden = false;
+    resultsEl.classList.add('is-visible');
   }
 
   function clearRollUi() {
@@ -600,7 +611,7 @@ function createRoll({
     grid.classList.remove('exit-up');
     resultsEl.classList.remove('exit-down');
     flipResult.textContent = '';
-    resultsEl.hidden = true;
+    resultsEl.classList.remove('is-visible');
     errorEl.hidden = true;
     lossEl.classList.remove('is-visible');
     lossEl.textContent = '';

@@ -701,7 +701,7 @@ test('a loss fires the onLost callback', async (t) => {
   assert.equal(lost, 1);
 });
 
-test('banking animates the cards out and fires onCelebrateDone', async (t) => {
+test('banking holds the celebration then animates the cards out and fires onCelebrateDone', async (t) => {
   let celebrated = 0;
   const { doc } = createDocument();
   const timers = fakeTimers();
@@ -727,6 +727,13 @@ test('banking animates the cards out and fires onCelebrateDone', async (t) => {
   assert.equal(grid.classList.contains('exit-up'), false);
 
   await roll.bankPending();
+
+  assert.equal(celebrated, 0);
+  assert.equal(grid.classList.contains('exit-up'), false);
+  assert.equal(results.classList.contains('exit-down'), false);
+  assert.deepEqual(timers.pending(), [1200]);
+
+  timers.fireAll();
 
   assert.equal(grid.classList.contains('exit-up'), true);
   assert.equal(results.classList.contains('exit-down'), true);
@@ -841,7 +848,7 @@ test('backing out banks the pending wins and shows only banked images', async (t
   assert.match(banked[1], /\/api\/roll\/\d+$/);
   assert.equal(roll.getState(), 'banked');
   const results = roll.el.querySelector('.roll-results');
-  assert.equal(results.hidden, false);
+  assert.equal(results.classList.contains('is-visible'), true);
   assert.match(results.textContent, /You kept 2 images/);
   assert.equal(results.querySelectorAll('.card').length, 2);
 });
@@ -875,7 +882,7 @@ test('a second back-out press does not wipe the results', async (t) => {
 
   assert.deepEqual(second, []);
   const results = roll.el.querySelector('.roll-results');
-  assert.equal(results.hidden, false);
+  assert.equal(results.classList.contains('is-visible'), true);
   assert.match(results.textContent, /You kept 1 image/);
   assert.equal(results.querySelectorAll('.card').length, 1);
 });
@@ -943,9 +950,63 @@ test('a loss shows zero banked images', async (t) => {
   await roll.resolveFlip('tails');
 
   const results = roll.el.querySelector('.roll-results');
-  assert.equal(results.hidden, false);
+  assert.equal(results.classList.contains('is-visible'), true);
   assert.match(results.textContent, /You kept 0 images/);
   assert.equal(results.querySelectorAll('.card').length, 0);
+});
+
+test('banking adds the celebration class to exactly the won cards', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+
+  await roll.bankPending();
+
+  const cards = roll.getCards();
+  const order = roll.getFlipOrder();
+  for (let i = 0; i < cards.length; i++) {
+    const isWon = i === order[0] || i === order[1];
+    assert.equal(cards[i].classList.contains('celebrating'), isWon, `card ${i}`);
+  }
+});
+
+test('the results heading bounces in and thumbnails enter staggered', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  await roll.bankPending();
+
+  const results = roll.el.querySelector('.roll-results');
+  const heading = results.querySelector('h2');
+  assert.equal(heading.classList.contains('heading-bounce'), true);
+  assert.equal(heading.textContent, 'You kept 2 images');
+  const cards = results.querySelectorAll('.card');
+  assert.equal(cards.length, 2);
+  for (const card of cards) {
+    assert.equal(card.classList.contains('entering'), true);
+  }
+});
+
+test('banking announces the kept count in the live region', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  await roll.bankPending();
+
+  assert.equal(roll.el.querySelector('.flip-live').textContent, 'You kept 1 image.');
 });
 
 test('coin flip is a fair heads or tails from a random value', (t) => {

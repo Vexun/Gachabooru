@@ -568,6 +568,42 @@ Slice 4.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm all
    win/loss animations are instant.
 
+## Play Page Overhaul — Slice 5: Bank Celebration & Results Transition
+
+Slice 5 makes banking feel rewarding: the results panel holds for about
+1.2 seconds while the won cards glow, the heading bounces in, and the
+banked thumbnails enter one after another. See `PLAN.md` Slice 5.
+
+### Automated checks
+
+- `npm test` — Slice 5 adds to `test/client/roll.test.js`:
+  - The exit animations (`exit-up` on the grid and `exit-down` on the
+    results) start only after the 1200 ms celebration hold, and
+    `onCelebrateDone` fires after the exit completes.
+  - `renderResults` shows the results via the `.is-visible` class instead
+    of toggling `hidden`, the heading carries the `heading-bounce` class,
+    and the banked thumbnails carry `.entering`.
+  - `bankPending` adds `.celebrating` to exactly the won cards.
+  - The `.flip-live` region announces "You kept N image(s)." on bank.
+- `npm run lint` — clean output.
+
+### Manual smoke
+
+1. Start the app with `npm start`.
+2. Open `http://127.0.0.1:3000` in a browser.
+3. Roll and win a few cards, then click Back out & bank.
+4. Confirm the results heading bounces in with "You kept N images".
+5. Confirm the won cards in the play grid scale up with a gold glow while
+   the hold lasts (about 1.2 seconds).
+6. Confirm the banked thumbnails enter one after another with a staggered
+   fade-and-scale.
+7. Confirm the whole grid and the results then fade out and the centered
+   hero reappears with the previous search still filled.
+8. Lose a roll and confirm "You kept 0 images" still shows, now with the
+   same fade-in.
+9. Enable `prefers-reduced-motion` in the OS settings and confirm the
+   hold, bounces, and card entrances happen instantly.
+
 ## Play Page Overhaul — Play Page Flow
 
 The play page has three states, driven by classes on `<body>`: `mode-hero`
@@ -606,8 +642,9 @@ to search for a tag, the tag search, the balance, and the Roll button.
 7. Click Roll again after a loss. Confirm the old cards move up and fade
    out first, then the new cards enter from the side.
 8. Roll again and win all 5 cards (or win some and click Back out & bank).
-   Confirm the cards fade up and the banked results fade down, then the
-   centered hero reappears with the previous search still filled.
+   Confirm the results hold for about a second with the won cards glowing
+   and the heading bouncing in, then the grid and the results fade away
+   and the centered hero reappears with the previous search still filled.
 9. Click Roll from the hero. Confirm the old grid is already cleared (no
    leftover cards flash) and the hero fades out before the new cards
    enter.
