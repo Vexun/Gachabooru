@@ -307,11 +307,7 @@ body.hero-leaving .roll-balance {
   align-items: center;
   justify-content: center;
   transform: rotateY(180deg);
-  background: repeating-linear-gradient(
-    45deg,
-    var(--accent) 0 10px,
-    var(--accent-2) 10px 20px
-  );
+  background: linear-gradient(135deg, #009be6 0%, #b871ff 100%);
   font-size: 1.5rem;
   font-weight: 700;
   color: #fff;
