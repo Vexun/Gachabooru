@@ -835,6 +835,49 @@ test('a loss fires the onLost callback', async (t) => {
   roll.setCall('heads');
   await roll.resolveFlip('tails');
 
+  assert.equal(lost, 0);
+
+  timers.fireAll();
+  timers.fireAll();
+
+  assert.equal(lost, 1);
+});
+
+test('the flip panel waits for the shake to end before the controls return', async (t) => {
+  let lost = 0;
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  const roll = createRoll({
+    document: doc,
+    fetch: fakeFetch({ posts: fivePosts }),
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+    random: () => 0.9,
+    onLost: () => {
+      lost += 1;
+    },
+  });
+  t.after(() => roll.destroy());
+  roll.setBanner(banner);
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  await roll.resolveFlip('tails');
+
+  const flipPanel = roll.el.querySelector('.flip-panel');
+  assert.equal(flipPanel.classList.contains('is-visible'), true);
+  assert.equal(flipPanel.classList.contains('is-leaving'), false);
+  assert.equal(lost, 0);
+
+  const losingCard = roll.getCards()[roll.getFlipOrder()[0]];
+  losingCard.dispatchEvent({ type: 'animationend' });
+
+  assert.equal(flipPanel.classList.contains('is-visible'), false);
+  assert.equal(flipPanel.classList.contains('is-leaving'), true);
+  assert.equal(lost, 0);
+
+  flipPanel.dispatchEvent({ type: 'animationend' });
+
   assert.equal(lost, 1);
 });
 

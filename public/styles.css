@@ -782,6 +782,18 @@ body.hero-leaving .roll-balance {
   50%      { box-shadow: 0 0 12px rgba(124, 108, 240, 0.5); }
 }
 
+body.mode-top .banner-picker,
+body.mode-top .roll-button {
+  max-height: 0;
+  overflow: hidden;
+  animation: controlsDrop 0.6s ease both;
+}
+
+@keyframes controlsDrop {
+  from { max-height: 0; transform: translateY(-100%); opacity: 0; }
+  to   { max-height: 360px; transform: translateY(0); opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

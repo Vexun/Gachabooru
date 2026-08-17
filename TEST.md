@@ -561,9 +561,10 @@ Slice 4.
    holds for about 2 seconds before the next card's controls appear.
 5. Confirm the won card stays bright beside the next highlighted card.
 6. Lose a card. Confirm the card shakes and tints red, a muted "You lost
-   the roll" message fades in, then the flip panel slides down and fades
-   out, and the Roll button stays disabled for about two seconds before a
-   new roll can start.
+   the roll" message fades in, then after the shake ends the flip panel
+   slides down and fades out, and the search bar and Roll button drop
+   back in from the top, pushing the grid down. The Roll button stays
+   disabled for about two seconds before a new roll can start.
 7. Confirm the outcome is announced to screen readers.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm all
    win/loss animations are instant.

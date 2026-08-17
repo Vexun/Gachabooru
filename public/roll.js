@@ -37,7 +37,7 @@ function createRoll({
   const LOSS_LOCKOUT_MS = 2000;
   const PANEL_SLIDE_MS = 500;
   const PRESS_MS = 150;
-  const LOSS_MSG_MS = 500;
+  const SHAKE_MS = 500;
   const EXIT_MS = 600;
   const CELEBRATE_MS = 1200;
   const FALLBACK_BUFFER_MS = 200;
@@ -455,14 +455,22 @@ function createRoll({
     badge.addEventListener('animationend', () => badge.remove(), { once: true });
   }
 
-  function hideFlipPanel() {
+  function hideFlipPanel(onHidden) {
     flipPanel.classList.remove('is-visible');
     flipPanel.classList.add('is-leaving');
+    let done = false;
     const onLeave = () => {
+      if (done) {
+        return;
+      }
+      done = true;
       flipPanel.classList.remove('is-leaving');
       if (panelTimer) {
         clearTimeoutImpl(panelTimer);
         panelTimer = null;
+      }
+      if (onHidden) {
+        onHidden();
       }
     };
     flipPanel.addEventListener('animationend', onLeave, { once: true });
@@ -591,11 +599,27 @@ function createRoll({
       lossEl.textContent = 'You lost the roll. No images are kept.';
       lossEl.classList.add('is-visible');
       liveRegion.textContent = `${result[0].toUpperCase()}${result.slice(1)} — you lost the roll.`;
-      // Let the loss message fade in, then slide the panel down.
-      panelTimer = setTimeoutImpl(() => {
-        panelTimer = null;
-        hideFlipPanel();
-      }, LOSS_MSG_MS);
+      // Fade the panel down only after the shake ends, then tell the app
+      // so the top controls can drop back in.
+      let finished = false;
+      const hideAfterShake = () => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        if (panelTimer) {
+          clearTimeoutImpl(panelTimer);
+          panelTimer = null;
+        }
+        losingCard.removeEventListener('animationend', hideAfterShake);
+        hideFlipPanel(() => {
+          if (onLost) {
+            onLost();
+          }
+        });
+      };
+      losingCard.addEventListener('animationend', hideAfterShake, { once: true });
+      panelTimer = setTimeoutImpl(hideAfterShake, SHAKE_MS + FALLBACK_BUFFER_MS);
       renderResults([]);
       button.disabled = true;
       rollLockTimer = setTimeoutImpl(() => {
@@ -603,9 +627,6 @@ function createRoll({
         setBalance(balance);
         button.focus();
       }, LOSS_LOCKOUT_MS);
-      if (onLost) {
-        onLost();
-      }
       return { outcome: 'loss' };
     }
     revealCard(pos);
