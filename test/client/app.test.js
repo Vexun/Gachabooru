@@ -146,9 +146,13 @@ test('createApp wires the picker, roll, and close detection', async () => {
   const rollEl = doc.createElement('div');
   const setBannerCalls = [];
   let balanceLoads = 0;
+  let rollStarts = 0;
   const createRoll = () => ({
     el: rollEl,
     setBanner: (tag) => setBannerCalls.push(tag),
+    startRoll: () => {
+      rollStarts += 1;
+    },
     loadBalance: () => {
       balanceLoads += 1;
     },
@@ -184,6 +188,9 @@ test('createApp wires the picker, roll, and close detection', async () => {
   pickerOptions.onChange(tag);
   assert.deepEqual(app.state.banner, tag);
   assert.deepEqual(setBannerCalls, [tag]);
+
+  pickerOptions.onSubmit();
+  assert.equal(rollStarts, 1);
 });
 
 test('createApp marks the status unreachable when the health check fails', async () => {

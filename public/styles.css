@@ -180,7 +180,8 @@ body.hero-leaving .roll-balance {
   cursor: pointer;
 }
 
-.suggestions li:hover {
+.suggestions li:hover,
+.suggestions li.active {
   background: var(--panel-2);
 }
 

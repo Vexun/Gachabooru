@@ -106,6 +106,11 @@ function createApp({
           roll.setBanner(tag);
         }
       },
+      onSubmit: () => {
+        if (roll) {
+          roll.startRoll();
+        }
+      },
     });
     bannerSection.append(picker.el);
   }
