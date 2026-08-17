@@ -31,7 +31,7 @@ client page, and the server-side state module.
     preserved), recovery of a deleted state file, rollback on
     structurally-invalid JSON, refusal to write invalid state, and a
     successful app boot with a corrupt state file.
-  - `test/economy.test.js` — first-open bonus grants +10 exactly once.
+  - `test/economy.test.js` — first-open bonus grants +50 exactly once.
   - `test/routes.test.js` — `GET /api/health` returns 200; the static
     client page is served.
   - `test/client/app.test.js` — `index.html` declares the sections
@@ -287,12 +287,12 @@ spending a roll on each successful pool request.
 ### Automated checks
 
 - `npm test` — Slice 6 adds:
-  - `test/economy.test.js` — 10 rolls per whole hour, whole-hour
-    flooring, the accrual cap at 300 (without reducing an existing
-    balance above the cap), the 24-hour bonus only when below 300 at a
-    boundary, no bonus while at or above the cap, no bonus stacking
-    across boundaries at the cap, the first-open +50 once, the balance
-    floor at 0, and clock-skew handling.
+  - `test/economy.test.js` — 5 rolls per whole hour, whole-hour
+    flooring, the accrual cap at 200 (without reducing an existing
+    balance above the cap), the 24-hour bonus when at or below 200 at a
+    boundary, the bonus granting at the cap (up to 210), no bonus while
+    above the cap, no bonus stacking across boundaries, the first-open
+    +50 once, the balance floor at 0, and clock-skew handling.
   - `test/routes.test.js` — `GET /api/balance` returns the balance, a
     successful pool request deducts one roll, a pool request is blocked
     with 402 on an insufficient balance (without calling upstream), and a

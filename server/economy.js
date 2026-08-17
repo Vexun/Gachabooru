@@ -2,9 +2,9 @@
 
 const HOUR_MS = 3600 * 1000;
 const DAY_MS = 24 * HOUR_MS;
-const ACCRUAL_PER_HOUR = 10;
-const CAP = 300;
-const DAILY_BONUS = 20;
+const ACCRUAL_PER_HOUR = 5;
+const CAP = 200;
+const DAILY_BONUS = 10;
 const FIRST_OPEN_BONUS = 50;
 
 function claimFirstOpenBonus(state) {
@@ -33,7 +33,7 @@ function getBalance(state, now = Date.now()) {
   const headroom = Math.max(0, CAP - balance);
   balance += Math.min(headroom, wholeHours * ACCRUAL_PER_HOUR);
 
-  if (daysCrossed > 0 && balance < CAP) {
+  if (daysCrossed > 0 && balance <= CAP) {
     balance += DAILY_BONUS;
   }
 
