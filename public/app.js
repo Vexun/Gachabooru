@@ -14,12 +14,15 @@ function createApp({
   const clearTimeoutImpl = timerClearTimeout || clearTimeout;
   const HERO_FADE_MS = 600;
   const HERO_FADE_BUFFER_MS = 200;
+  const CONTROLS_RISE_MS = 600;
+  const CONTROLS_RISE_BUFFER_MS = 200;
   const statusEl = document.getElementById('server-status');
   const bannerSection = document.getElementById('banner-section');
   const rollSection = document.getElementById('roll-section');
   const gameState = { banner: null };
   const MODES = ['hero', 'rolling', 'top'];
   let heroFadeTimer = null;
+  let controlsTimer = null;
 
   function setMode(mode) {
     for (const name of MODES) {
@@ -49,6 +52,30 @@ function createApp({
         hero.addEventListener('animationend', finish, { once: true });
       }
       heroFadeTimer = setTimeoutImpl(finish, HERO_FADE_MS + HERO_FADE_BUFFER_MS);
+    });
+  }
+
+  function riseControls() {
+    return new Promise((resolve) => {
+      document.body.classList.add('controls-leaving');
+      let done = false;
+      const finish = () => {
+        if (done) {
+          return;
+        }
+        done = true;
+        if (controlsTimer) {
+          clearTimeoutImpl(controlsTimer);
+          controlsTimer = null;
+        }
+        document.body.classList.remove('controls-leaving');
+        resolve();
+      };
+      const banner = document.getElementById('banner-section');
+      if (banner && banner.addEventListener) {
+        banner.addEventListener('animationend', finish, { once: true });
+      }
+      controlsTimer = setTimeoutImpl(finish, CONTROLS_RISE_MS + CONTROLS_RISE_BUFFER_MS);
     });
   }
 
@@ -93,6 +120,8 @@ function createApp({
       onRollStart: async () => {
         if (document.body.classList.contains('mode-hero')) {
           await fadeHero();
+        } else if (document.body.classList.contains('mode-top')) {
+          await riseControls();
         }
         setMode('rolling');
       },

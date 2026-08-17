@@ -707,8 +707,9 @@ to search for a tag, the tag search, the balance, and the Roll button.
 6. Lose a flip. Confirm the loss message plays, then the search and Roll
    button reappear at the top with the previous search still filled, and
    the grid stays visible.
-7. Click Roll again after a loss. Confirm the old cards move up and fade
-   out first, then the new cards enter from the side.
+7. Click Roll again after a loss. Confirm the search bar, the balance, and
+   the Roll button rise up and fade out first, then the old cards move up
+   and fade out, then the new cards enter from the side.
 8. Roll again and win all 5 cards (or win some and click Back out & bank).
    Confirm the results hold for about a second with the won cards glowing
    and the heading bouncing in, then the grid and the results fade away

@@ -96,8 +96,12 @@ test('createApp switches play page modes on roll callbacks', async () => {
   assert.equal(doc.body.classList.contains('mode-top'), true);
 
   const topRoll = captured.onRollStart();
-  assert.equal(doc.body.classList.contains('mode-rolling'), true);
+  assert.equal(doc.body.classList.contains('controls-leaving'), true);
+  assert.equal(doc.body.classList.contains('mode-rolling'), false);
+  timers.fireAll();
   await topRoll;
+  assert.equal(doc.body.classList.contains('mode-rolling'), true);
+  assert.equal(doc.body.classList.contains('controls-leaving'), false);
 
   captured.onCelebrateDone();
   assert.equal(doc.body.classList.contains('mode-hero'), true);
@@ -125,6 +129,8 @@ test('styles.css drops the top controls back in on the loss state', () => {
   assert.match(STYLES_CSS, /body\.mode-top \.banner-picker/);
   assert.match(STYLES_CSS, /body\.mode-top \.roll-button/);
   assert.match(STYLES_CSS, /controlsDrop/);
+  assert.match(STYLES_CSS, /body\.controls-leaving/);
+  assert.match(STYLES_CSS, /controlsRise/);
 });
 
 test('createApp wires the picker, roll, and close detection', async () => {

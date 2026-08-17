@@ -794,6 +794,20 @@ body.mode-top .roll-button {
   to   { max-height: 360px; transform: translateY(0); opacity: 1; }
 }
 
+body.controls-leaving .banner-picker,
+body.controls-leaving .roll-button,
+body.controls-leaving .roll-balance {
+  max-height: 0;
+  overflow: hidden;
+  animation: controlsRise 0.6s ease both;
+  pointer-events: none;
+}
+
+@keyframes controlsRise {
+  from { max-height: 360px; transform: translateY(0); opacity: 1; }
+  to   { max-height: 0; transform: translateY(-100%); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
