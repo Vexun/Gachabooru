@@ -1,13 +1,13 @@
 :root {
-  --bg: #12121a;
-  --panel: #1c1c28;
-  --panel-2: #242434;
-  --text: #e8e8f0;
-  --muted: #9a9ab0;
-  --accent: #7c6cf0;
-  --accent-2: #f0a04b;
-  --danger: #e05252;
-  --ok: #4bc07a;
+  --bg: #1e1e2c;
+  --panel: #2c2d3f;
+  --panel-2: #3f4058;
+  --text: #d1d1da;
+  --muted: #9192a7;
+  --accent: #009be6;
+  --accent-2: #ccaa00;
+  --danger: #ff5a5b;
+  --ok: #00ab2c;
 }
 
 * {
@@ -36,7 +36,7 @@ header {
   gap: 1rem;
   padding: 0.75rem 1.25rem;
   background: var(--panel);
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #3f4058;
 }
 
 header h1 {
@@ -471,7 +471,7 @@ body.hero-leaving .roll-balance {
   justify-content: center;
   gap: 0.75rem;
   padding: 2rem;
-  background: rgba(10, 10, 16, 0.9);
+  background: rgba(30, 30, 44, 0.9);
 }
 
 .gallery-detail-img {
@@ -500,13 +500,13 @@ body.hero-leaving .roll-balance {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
-  background: rgba(36, 36, 52, 0.6);
+  background: rgba(63, 64, 88, 0.6);
   color: var(--text);
   cursor: pointer;
 }
 
 .gallery-nav:hover {
-  background: rgba(36, 36, 52, 0.95);
+  background: rgba(63, 64, 88, 0.95);
 }
 
 .gallery-nav:disabled {
@@ -778,8 +778,8 @@ body.hero-leaving .roll-balance {
 }
 
 @keyframes flipPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(124, 108, 240, 0); }
-  50%      { box-shadow: 0 0 12px rgba(124, 108, 240, 0.5); }
+  0%, 100% { box-shadow: 0 0 0 rgba(0, 155, 230, 0); }
+  50%      { box-shadow: 0 0 12px rgba(0, 155, 230, 0.5); }
 }
 
 body.mode-top .banner-picker,
