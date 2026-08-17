@@ -31,12 +31,13 @@ function createRoll({
   const SLIDE_STEP_MS = 80;
   const SLIDE_DURATION_MS = 600;
   const FLIP_DURATION_MS = 600;
-  const COIN_DURATION_MS = 800;
-  const RESOLVE_DELAY_MS = 500;
-  const WIN_PAUSE_MS = 3000;
-  const LOSS_LOCKOUT_MS = 1000;
-  const PANEL_SLIDE_MS = 300;
+  const COIN_DURATION_MS = 900;
+  const RESOLVE_DELAY_MS = 600;
+  const WIN_PAUSE_MS = 2000;
+  const LOSS_LOCKOUT_MS = 2000;
+  const PANEL_SLIDE_MS = 500;
   const PRESS_MS = 150;
+  const LOSS_MSG_MS = 500;
   const EXIT_MS = 600;
   const CELEBRATE_MS = 1200;
   const FALLBACK_BUFFER_MS = 200;
@@ -587,10 +588,14 @@ function createRoll({
       const losingCard = cards[pos];
       losingCard.classList.add('shake', 'lost-tint');
       unfocusCards();
-      hideFlipPanel();
       lossEl.textContent = 'You lost the roll. No images are kept.';
       lossEl.classList.add('is-visible');
       liveRegion.textContent = `${result[0].toUpperCase()}${result.slice(1)} — you lost the roll.`;
+      // Let the loss message fade in, then slide the panel down.
+      panelTimer = setTimeoutImpl(() => {
+        panelTimer = null;
+        hideFlipPanel();
+      }, LOSS_MSG_MS);
       renderResults([]);
       button.disabled = true;
       rollLockTimer = setTimeoutImpl(() => {

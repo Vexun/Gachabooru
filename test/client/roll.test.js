@@ -623,7 +623,7 @@ test('clicking Flip spins the coin and resolves on animationend', async (t) => {
   assert.equal(coin.classList.contains('show-heads'), true);
   assert.equal(roll.el.querySelector('.flip-live').textContent, '');
   assert.equal(roll.getPendingWins().length, 0);
-  assert.equal(timers.pending()[0], 500);
+  assert.equal(timers.pending()[0], 600);
 
   timers.fireAll();
 
@@ -653,14 +653,20 @@ test('a coin that settles on tails announces tails and loses the roll', async (t
   assert.equal(roll.el.querySelector('.flip-live').textContent, 'Tails — you lost the roll.');
   assert.equal(roll.getState(), 'lost');
   const flipPanel = roll.el.querySelector('.flip-panel');
-  assert.equal(flipPanel.classList.contains('is-visible'), false);
-  assert.equal(flipPanel.classList.contains('is-leaving'), true);
   const lossEl = roll.el.querySelector('.roll-loss');
   assert.equal(lossEl.classList.contains('is-visible'), true);
   assert.match(lossEl.textContent, /You lost the roll/);
   const losingCard = roll.getCards()[roll.getFlipOrder()[0]];
   assert.equal(losingCard.classList.contains('shake'), true);
   assert.equal(losingCard.classList.contains('lost-tint'), true);
+
+  assert.equal(flipPanel.classList.contains('is-visible'), true);
+  assert.equal(flipPanel.classList.contains('is-leaving'), false);
+
+  timers.fireAll();
+
+  assert.equal(flipPanel.classList.contains('is-visible'), false);
+  assert.equal(flipPanel.classList.contains('is-leaving'), true);
 });
 
 test('a second Flip press during the coin spin is ignored', async (t) => {
@@ -725,7 +731,7 @@ test('the next card is not focused until the win pause elapses', async (t) => {
   const secondPos = roll.getFlipOrder()[1];
   const cards = roll.getCards();
   assert.equal(cards[secondPos].classList.contains('focused'), false);
-  assert.equal(timers.pending()[0], 3000);
+  assert.equal(timers.pending()[0], 2000);
 
   timers.fireAll();
 
@@ -743,7 +749,7 @@ test('the roll button stays locked briefly after a loss', async (t) => {
 
   const button = roll.el.querySelector('button');
   assert.equal(button.disabled, true);
-  assert.ok(timers.pending().includes(1000), 'loss lockout timer is pending');
+  assert.ok(timers.pending().includes(2000), 'loss lockout timer is pending');
 
   timers.fireAll();
 

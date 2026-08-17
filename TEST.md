@@ -522,7 +522,7 @@ active card while dimming the others, and slides the flip panel in. See
 5. Click Heads or Tails, then click Flip.
 6. Confirm the coin spins fast, decelerates visibly, and settles on the
    result face.
-7. Confirm the coin holds on the settled face for about half a second,
+7. Confirm the coin holds on the settled face for about 0.6 seconds,
    then the outcome lands: the card reveals and the result text appears.
 8. Win two cards and confirm both won images stay bright while the next
    card is focused.
@@ -558,12 +558,12 @@ Slice 4.
 3. Roll and play through to the flip sequence.
 4. Win a card. Confirm the card flips face-up with a gold flash and a
    "+1" badge that floats up and fades, and that the "It matches" message
-   holds for about 3 seconds before the next card's controls appear.
+   holds for about 2 seconds before the next card's controls appear.
 5. Confirm the won card stays bright beside the next highlighted card.
-6. Lose a card. Confirm the card shakes and tints red, the flip panel
-   slides down and fades out, a muted "You lost the roll" message fades
-   in, and the Roll button stays disabled for about a second before a new
-   roll can start.
+6. Lose a card. Confirm the card shakes and tints red, a muted "You lost
+   the roll" message fades in, then the flip panel slides down and fades
+   out, and the Roll button stays disabled for about two seconds before a
+   new roll can start.
 7. Confirm the outcome is announced to screen readers.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm all
    win/loss animations are instant.
