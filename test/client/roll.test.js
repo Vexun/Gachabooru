@@ -537,6 +537,7 @@ test('focus returns to the roll button after banking', async (t) => {
   await roll.bankPending();
   timers.fireAll();
   timers.fireAll();
+  timers.fireAll();
 
   const button = roll.el.querySelector('button');
   assert.equal(button.focused, true);
@@ -918,6 +919,11 @@ test('banking holds the celebration then animates the cards out and fires onCele
   assert.equal(grid.classList.contains('exit-up'), true);
   assert.equal(results.classList.contains('exit-down'), true);
   assert.equal(celebrated, 0);
+
+  timers.fireAll();
+
+  assert.equal(celebrated, 0);
+  assert.deepEqual(timers.pending(), [1000]);
 
   timers.fireAll();
 

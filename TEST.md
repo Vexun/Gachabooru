@@ -598,8 +598,9 @@ banked thumbnails enter one after another. See `PLAN.md` Slice 5.
    the hold lasts (about 1.2 seconds).
 6. Confirm the banked thumbnails enter one after another with a staggered
    fade-and-scale.
-7. Confirm the whole grid and the results then fade out and the centered
-   hero reappears with the previous search still filled.
+7. Confirm the whole grid and the results then fade out, the screen
+   holds for about a second, and the centered hero fades back in with the
+   previous search still filled.
 8. Lose a roll and confirm "You kept 0 images" still shows, now with the
    same fade-in.
 9. Enable `prefers-reduced-motion` in the OS settings and confirm the
@@ -713,9 +714,9 @@ to search for a tag, the tag search, the balance, and the Roll button.
    and fade out, then the new cards enter from the side.
 8. Roll again and win all 5 cards (or win some and click Back out & bank).
    Confirm the results hold for about a second with the won cards glowing
-   and the heading bouncing in, then the grid and the results fade away
-   and the centered hero fades in over about a second with the previous
-   search still filled.
+   and the heading bouncing in, then the grid and the results fade away,
+   the screen holds for about a second, and the centered hero fades in
+   over about a second with the previous search still filled.
 9. Click Roll from the hero. Confirm the old grid is already cleared (no
    leftover cards flash) and the hero fades out before the new cards
    enter.

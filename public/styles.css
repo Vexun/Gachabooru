@@ -266,6 +266,7 @@ body.hero-leaving .roll-balance {
   border-radius: 8px;
   background: var(--panel-2);
   perspective: 800px;
+  transition: transform 0.5s ease, box-shadow 0.5s ease, opacity 0.5s ease;
 }
 
 .roll-results .card {

@@ -40,6 +40,7 @@ function createRoll({
   const SHAKE_MS = 500;
   const EXIT_MS = 600;
   const CELEBRATE_MS = 1200;
+  const HERO_DELAY_MS = 1000;
   const FALLBACK_BUFFER_MS = 200;
 
   const root = document.createElement('div');
@@ -566,10 +567,14 @@ function createRoll({
         clearTimeoutImpl(exitTimer);
         exitTimer = null;
       }
-      if (onCelebrateDone) {
-        onCelebrateDone();
-      }
-      button.focus();
+      // Pause before handing the page back to the hero.
+      exitTimer = setTimeoutImpl(() => {
+        exitTimer = null;
+        if (onCelebrateDone) {
+          onCelebrateDone();
+        }
+        button.focus();
+      }, HERO_DELAY_MS);
     };
     exitTimer = setTimeoutImpl(() => {
       grid.classList.add('exit-up');
