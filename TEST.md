@@ -698,7 +698,8 @@ to search for a tag, the tag search, the balance, and the Roll button.
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Confirm the idle page shows the centered Gachabooru title, a message
-   to search for a tag, the tag search, the balance, and the Roll button.
+   to search for a tag, the tag search, the balance, and the Roll button,
+   fading in over about a second.
 4. Search for a tag and select it. Confirm the chosen tag and the balance
    show in the hero, and the Roll button becomes enabled.
 5. Click Roll. Confirm the title, search, balance, and Roll button fade
@@ -713,7 +714,8 @@ to search for a tag, the tag search, the balance, and the Roll button.
 8. Roll again and win all 5 cards (or win some and click Back out & bank).
    Confirm the results hold for about a second with the won cards glowing
    and the heading bouncing in, then the grid and the results fade away
-   and the centered hero reappears with the previous search still filled.
+   and the centered hero fades in over about a second with the previous
+   search still filled.
 9. Click Roll from the hero. Confirm the old grid is already cleared (no
    leftover cards flash) and the hero fades out before the new cards
    enter.

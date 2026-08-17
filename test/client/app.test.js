@@ -125,6 +125,11 @@ test('styles.css hides only the main roll button during rolling', () => {
   assert.doesNotMatch(STYLES_CSS, /body\.mode-rolling \.roll button/);
 });
 
+test('styles.css fades the hero in on every hero entry', () => {
+  assert.match(STYLES_CSS, /body\.mode-hero #hero-section/);
+  assert.match(STYLES_CSS, /heroFadeIn/);
+});
+
 test('styles.css drops the top controls back in on the loss state', () => {
   assert.match(STYLES_CSS, /body\.mode-top \.banner-picker/);
   assert.match(STYLES_CSS, /body\.mode-top \.roll-button/);

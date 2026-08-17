@@ -135,6 +135,13 @@ body.mode-rolling .roll-button {
   display: none;
 }
 
+body.mode-hero #hero-section,
+body.mode-hero .banner-picker,
+body.mode-hero .roll-button,
+body.mode-hero .roll-balance {
+  animation: heroFadeIn 1s ease both;
+}
+
 body.hero-leaving #hero-section,
 body.hero-leaving .banner-picker,
 body.hero-leaving .roll-button,
@@ -740,6 +747,11 @@ body.hero-leaving .roll-balance {
 @keyframes heroFadeOut {
   from { opacity: 1; }
   to   { opacity: 0; }
+}
+
+@keyframes heroFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .roll-results h2.heading-bounce {
