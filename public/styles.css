@@ -28,6 +28,7 @@ body {
   font-family: system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
 }
 
 header {
@@ -248,7 +249,6 @@ body.hero-leaving .roll-balance {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 0.75rem;
-  overflow-x: hidden;
 }
 
 .roll-grid.exit-up {
@@ -264,9 +264,12 @@ body.hero-leaving .roll-balance {
   margin: 0;
   aspect-ratio: 3 / 4;
   border-radius: 8px;
-  overflow: hidden;
   background: var(--panel-2);
   perspective: 800px;
+}
+
+.roll-results .card {
+  overflow: hidden;
 }
 
 .card img {
@@ -796,6 +799,10 @@ body.mode-top .roll-button {
   max-height: 0;
   overflow: hidden;
   animation: controlsDrop 0.6s ease both;
+}
+
+body.mode-top .banner-picker {
+  padding: 0 6px;
 }
 
 @keyframes controlsDrop {

@@ -130,6 +130,11 @@ test('styles.css fades the hero in on every hero entry', () => {
   assert.match(STYLES_CSS, /heroFadeIn/);
 });
 
+test('styles.css clips page-level overflow instead of the roll grid', () => {
+  assert.match(STYLES_CSS, /body\s*\{[\s\S]*overflow-x: hidden/);
+  assert.doesNotMatch(STYLES_CSS, /\.roll-grid\s*\{[\s\S]*overflow-x: hidden/);
+});
+
 test('styles.css drops the top controls back in on the loss state', () => {
   assert.match(STYLES_CSS, /body\.mode-top \.banner-picker/);
   assert.match(STYLES_CSS, /body\.mode-top \.roll-button/);
