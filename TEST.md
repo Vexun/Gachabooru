@@ -1,7 +1,33 @@
 # TEST.md — Gachabooru testing instructions
 
-How to test Gachabooru. Follow this file slice by slice. Each slice ends
-with a testable state.
+How to test Gachabooru. The file has three parts: the core game slices
+(Part 1), the close-from-browser launcher, and the play page overhaul
+slices (Part 2). A play page flow overview closes the file. Each slice
+ends with a testable state.
+
+## Contents
+
+- [Setup](#setup)
+- [Part 1 — Core game](#part-1--core-game)
+  - [Slice 0 — Skeleton](#slice-0--skeleton)
+  - [Slice 1 — Banner picker](#slice-1--banner-picker)
+  - [Slice 2 — Roll pool](#slice-2--roll-pool)
+  - [Slice 3 — Peek and cover](#slice-3--peek-and-cover)
+  - [Slice 4 — Coin flip, back-out, banking](#slice-4--coin-flip-back-out-banking)
+  - [Slice 5 — Gallery](#slice-5--gallery)
+  - [Slice 6 — Economy](#slice-6--economy)
+  - [Slice 7 — General-only filter, docs, final QA](#slice-7--general-only-filter-docs-final-qa)
+- [Launcher — close-from-browser shutdown](#launcher--close-from-browser-shutdown)
+- [Part 2 — Play page overhaul](#part-2--play-page-overhaul)
+  - [Slice 0 — Foundation](#slice-0--foundation)
+  - [Slice 1 — Card DOM Restructure & 3D Flip](#slice-1--card-dom-restructure--3d-flip)
+  - [Slice 2 — Covered Slide-In Reveal](#slice-2--covered-slide-in-reveal)
+  - [Slice 3 — Coin Flip & Flip Panel Polish](#slice-3--coin-flip--flip-panel-polish)
+  - [Slice 4 — Win/Loss Micro-Animations](#slice-4--winloss-micro-animations)
+  - [Slice 5 — Bank Celebration & Results Transition](#slice-5--bank-celebration--results-transition)
+  - [Slice 6 — Button States & Micro-Interactions](#slice-6--button-states--micro-interactions)
+  - [Slice 7 — Integration, Accessibility & Performance](#slice-7--integration-accessibility--performance)
+- [Play page flow](#play-page-flow)
 
 ## Setup
 
@@ -17,12 +43,17 @@ with a testable state.
   tabs open keeps the server alive. With `npm run serve`, the server stays
   up until you stop it.
 
-## Slice 0 — Skeleton
+## Part 1 — Core game
+
+The core game is built in slices 0 to 7. Each slice ends with a testable
+state.
+
+### Slice 0 — Skeleton
 
 Slice 0 delivers the project scaffold: an Express server, the static
 client page, and the server-side state module.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — the full suite. Slice 0 covers:
   - `test/state.test.js` — default state creation, persistence and
@@ -41,7 +72,7 @@ client page, and the server-side state module.
     check and "unreachable" when it fails.
 - `npm run lint` — clean output, no warnings.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -56,18 +87,18 @@ client page, and the server-side state module.
    `data/state.json.corrupt` file.
 9. Confirm `collections/` exists.
 
-### Notes
+#### Notes
 
 - `data/` and `collections/` are gitignored and created on first run.
 - Stopping and restarting the app keeps the same state; the first-open
   bonus is not granted again.
 
-## Slice 1 — Banner picker
+### Slice 1 — Banner picker
 
 Slice 1 delivers tag autocomplete: a Danbooru API proxy and a searchable
 banner picker in the UI.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 1 adds:
   - `test/danbooru.test.js` — autocomplete maps results, filters to
@@ -85,7 +116,7 @@ banner picker in the UI.
     selection, shows a no-results message, and clears on empty input.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -99,11 +130,11 @@ banner picker in the UI.
    only general/copyright/character results.
 8. Confirm `curl "http://127.0.0.1:3000/api/autocomplete?q="` returns 422.
 
-## Slice 2 — Roll pool
+### Slice 2 — Roll pool
 
 Slice 2 builds the 5-image roll pool from the selected banner.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 2 adds:
   - `test/danbooru.test.js` — `searchPosts` builds the query (tag,
@@ -121,7 +152,7 @@ Slice 2 builds the 5-image roll pool from the selected banner.
     the previous cards.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -134,12 +165,12 @@ Slice 2 builds the 5-image roll pool from the selected banner.
 9. Confirm `curl "http://127.0.0.1:3000/api/roll/pool?tag=hatsune_miku"`
    returns 5 posts and `?tag=` returns 422.
 
-## Slice 3 — Peek and cover
+### Slice 3 — Peek and cover
 
 Slice 3 shows the 5 cards face-up for 3 seconds, then covers them with
 identical numbered backs.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 3 adds to `test/client/roll.test.js`:
   - A roll enters the peek state and shows 5 images (served through the
@@ -154,7 +185,7 @@ identical numbered backs.
     `fetchBuffer`.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -166,12 +197,12 @@ identical numbered backs.
    striped card backs numbered 1 to 5.
 6. Roll again and confirm the peek/cover cycle repeats.
 
-## Slice 4 — Coin flip, back-out, banking
+### Slice 4 — Coin flip, back-out, banking
 
 Slice 4 adds the coin-flip flow, back-out, and server-side banking with
 image downloads.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 4 adds:
   - `test/download.test.js` — banking downloads the file and records
@@ -193,7 +224,7 @@ image downloads.
     the health check.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -209,11 +240,11 @@ image downloads.
 11. Confirm re-banking the same post is idempotent
     (`curl -X POST .../api/roll/<id>` twice).
 
-## Slice 5 — Gallery
+### Slice 5 — Gallery
 
 Slice 5 shows the earned collection and supports deletion.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 5 adds:
   - `test/state.test.js` — the state lists earned posts, `removeEarned`
@@ -249,7 +280,7 @@ Slice 5 shows the earned collection and supports deletion.
     count.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -286,12 +317,12 @@ Slice 5 shows the earned collection and supports deletion.
     `curl "http://127.0.0.1:3000/api/earned"` reports `downloaded: false`
     while the file is missing and `downloaded: true` once it lands.
 
-## Slice 6 — Economy
+### Slice 6 — Economy
 
 Slice 6 adds the roll balance: accrual over time, the 24-hour bonus, and
 spending a roll on each successful pool request.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 6 adds:
   - `test/economy.test.js` — 5 rolls per whole hour, whole-hour
@@ -310,7 +341,7 @@ spending a roll on each successful pool request.
     an error.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -323,12 +354,12 @@ spending a roll on each successful pool request.
 7. Confirm `curl "http://127.0.0.1:3000/api/balance"` matches the UI and
    that an extra roll at balance 0 returns 402.
 
-## Slice 7 — General-only filter, docs, final QA
+### Slice 7 — General-only filter, docs, final QA
 
 Slice 7 removes the rating setting. The app always filters to general-rated
 posts (completely safe for work).
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 7 adds:
   - `test/danbooru.test.js` — the client always applies the general-only
@@ -352,7 +383,7 @@ posts (completely safe for work).
 - `npm run lint` — clean output.
 - Full suite: `npm test` runs all tests.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -376,10 +407,10 @@ posts (completely safe for work).
 
 ## Launcher — close-from-browser shutdown
 
-Slice for the `run.js` launcher: the server shuts down when the app is
-closed from the browser.
+The `run.js` launcher shuts the server down when the app is closed from
+the browser.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — `test/shutdown.test.js` covers the watchdog:
   - No shutdown before any client connects.
@@ -389,7 +420,7 @@ closed from the browser.
     disconnects.
   - Connections to a non-`/ws` path are rejected.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Use the app normally.
@@ -401,12 +432,18 @@ closed from the browser.
 6. Start with `npm run serve` and confirm the server stays up after
    closing the browser.
 
-## Play Page Overhaul — Slice 0: Foundation
+## Part 2 — Play page overhaul
+
+The play page overhaul reworks the roll flow in slices 0 to 7. The core
+game behavior stays unchanged while the visual state machine is built up.
+See `PRD.md` and `PLAN.md` for the full plan.
+
+### Slice 0 — Foundation
 
 Slice 0 prepares the codebase for animation work without changing
 gameplay behavior. See `PRD.md` and `PLAN.md` for the full overhaul.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 0 adds:
   - `test/client/app.test.js` — `index.html` loads no vendor scripts,
@@ -416,7 +453,7 @@ gameplay behavior. See `PRD.md` and `PLAN.md` for the full overhaul.
     `.flip-live` region with `aria-live="polite"`.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -426,13 +463,13 @@ gameplay behavior. See `PRD.md` and `PLAN.md` for the full overhaul.
 5. Enable `prefers-reduced-motion` in the OS settings and confirm the
    page still renders and plays normally.
 
-## Play Page Overhaul — Slice 1: Card DOM Restructure & 3D Flip
+### Slice 1 — Card DOM Restructure & 3D Flip
 
 Slice 1 replaces the flat card DOM with a two-sided 3D structure and
 switches cover/reveal to CSS class toggles. See `PRD.md` section 4.1 and
 `PLAN.md` Slice 1.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 1 adds to `test/client/roll.test.js`:
   - `renderCards` builds `.card-inner` with `.card-front` and `.card-back`
@@ -444,7 +481,7 @@ switches cover/reveal to CSS class toggles. See `PRD.md` section 4.1 and
   - The numbered-backs and peek-state tests assert the new structure.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -457,14 +494,14 @@ switches cover/reveal to CSS class toggles. See `PRD.md` section 4.1 and
 7. Enable `prefers-reduced-motion` in the OS settings and confirm the
    cover and reveal happen instantly instead of rotating.
 
-## Play Page Overhaul — Slice 2: Covered Slide-In Reveal
+### Slice 2 — Covered Slide-In Reveal
 
 Slice 2 makes the roll cards slide in covered from the right, then flip
 to reveal their images once the images have loaded. Rarity glow shows
 while the fronts are visible. See `PRD.md` sections 4.2 and `PLAN.md`
 Slice 2.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 2 adds to `test/client/roll.test.js`:
   - A roll renders 5 hidden, covered cards while the images load.
@@ -479,7 +516,7 @@ Slice 2.
   - A new roll resets the cards to the hidden, covered state.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -495,13 +532,13 @@ Slice 2.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm the
    slide-in and flips happen instantly.
 
-## Play Page Overhaul — Slice 3: Coin Flip & Flip Panel Polish
+### Slice 3 — Coin Flip & Flip Panel Polish
 
 Slice 3 adds a 3D coin that spins when the player flips, highlights the
 active card while dimming the others, and slides the flip panel in. See
 `PRD.md` sections 4.3 and 4.4 and `PLAN.md` Slice 3.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 3 adds to `test/client/roll.test.js`:
   - The flip panel contains a coin with `.coin-heads` and `.coin-tails`
@@ -519,7 +556,7 @@ active card while dimming the others, and slides the flip panel in. See
   - Banking hides the flip panel via the `.is-visible` class.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -538,14 +575,14 @@ active card while dimming the others, and slides the flip panel in. See
 11. Enable `prefers-reduced-motion` in the OS settings and confirm the
     coin flip is instant.
 
-## Play Page Overhaul — Slice 4: Win/Loss Micro-Animations
+### Slice 4 — Win/Loss Micro-Animations
 
 Slice 4 adds emotional feedback for each flip outcome: a gold flash and
 floating "+1" badge on a win, and a shake, red tint, panel slide-down,
 and loss message on a loss. See `PRD.md` section 4.2 and `PLAN.md`
 Slice 4.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 4 adds to `test/client/roll.test.js`:
   - A win adds `.win-flash` to the won card and creates a `.float-badge`
@@ -558,7 +595,7 @@ Slice 4.
     pause.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -576,13 +613,13 @@ Slice 4.
 8. Enable `prefers-reduced-motion` in the OS settings and confirm all
    win/loss animations are instant.
 
-## Play Page Overhaul — Slice 5: Bank Celebration & Results Transition
+### Slice 5 — Bank Celebration & Results Transition
 
 Slice 5 makes banking feel rewarding: the results panel holds for about
 1.2 seconds while the won cards glow, the heading bounces in, and the
 banked thumbnails enter one after another. See `PLAN.md` Slice 5.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 5 adds to `test/client/roll.test.js`:
   - The exit animations (`exit-up` on the grid and `exit-down` on the
@@ -595,7 +632,7 @@ banked thumbnails enter one after another. See `PLAN.md` Slice 5.
   - The `.flip-live` region announces "You kept N image(s)." on bank.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -613,14 +650,14 @@ banked thumbnails enter one after another. See `PLAN.md` Slice 5.
 9. Enable `prefers-reduced-motion` in the OS settings and confirm the
    hold, bounces, and card entrances happen instantly.
 
-## Play Page Overhaul — Slice 6: Button States & Micro-Interactions
+### Slice 6 — Button States & Micro-Interactions
 
 Slice 6 polishes every interactive element: the Roll button shows a
 loading state while it fetches the pool, Heads/Tails flash on press, the
 Back-out button fades in on first appearance, and the Flip button pulses
 when it is armed. See `PLAN.md` Slice 6.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 6 adds to `test/client/roll.test.js`:
   - The roll button gets `.loading`, reads "Summoning…", and is disabled
@@ -633,7 +670,7 @@ when it is armed. See `PLAN.md` Slice 6.
   - The Flip button stays disabled during the coin spin (existing test).
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -647,12 +684,12 @@ when it is armed. See `PLAN.md` Slice 6.
 7. Enable `prefers-reduced-motion` in the OS settings and confirm the
    presses, pulse, and entrance happen instantly.
 
-## Play Page Overhaul — Slice 7: Integration, Accessibility & Performance
+### Slice 7 — Integration, Accessibility & Performance
 
 Slice 7 finishes the play page: managed keyboard focus, a visible focus
 outline, and a final documentation pass. See `PLAN.md` Slice 7.
 
-### Automated checks
+#### Automated checks
 
 - `npm test` — Slice 7 adds to `test/client/roll.test.js`:
   - Focus moves to the Heads button when the flip panel appears, and to
@@ -662,7 +699,7 @@ outline, and a final documentation pass. See `PLAN.md` Slice 7.
   - The full suite passes with no regressions.
 - `npm run lint` — clean output.
 
-### Manual smoke
+#### Manual smoke
 
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
@@ -680,7 +717,10 @@ outline, and a final documentation pass. See `PLAN.md` Slice 7.
    and the balance settles correctly.
 7. Repeat the smoke in a second browser (Chrome, Firefox, or Safari).
 
-## Play Page Overhaul — Play Page Flow
+## Play page flow
+
+This overview documents the finished play page's state machine. It is not
+a build slice.
 
 The play page has three states, driven by classes on `<body>`: `mode-hero`
 (initial and after winning/banking), `mode-rolling` (a roll in progress),
@@ -727,12 +767,3 @@ to search for a tag, the tag search, the balance, and the Roll button.
 9. Click Roll from the hero. Confirm the old grid is already cleared (no
    leftover cards flash) and the hero fades out before the new cards
    enter.
-
-
-
-
-
-
-
-
-
