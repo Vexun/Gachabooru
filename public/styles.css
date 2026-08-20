@@ -420,9 +420,18 @@ body.hero-leaving .roll-balance {
   padding: 1rem 0;
 }
 
-.gallery-more {
+.gallery-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   margin-top: 0.75rem;
-  padding: 0.4rem 1.25rem;
+}
+
+.gallery-pager button {
+  min-width: 2.2rem;
+  padding: 0.35rem 0.6rem;
   border: 1px solid var(--panel-2);
   border-radius: 6px;
   background: var(--panel-2);
@@ -430,14 +439,34 @@ body.hero-leaving .roll-balance {
   cursor: pointer;
 }
 
-.gallery-more:disabled {
+.gallery-pager button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
+.gallery-pager button.page-current,
+.gallery-pager button.page-current:disabled {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  opacity: 1;
+  cursor: default;
+}
+
+.gallery-pager .pager-pages {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.gallery-pager .pager-ellipsis {
+  color: var(--muted);
+  padding: 0.35rem 0.1rem;
+}
+
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.5rem;
 }
 
@@ -452,7 +481,7 @@ body.hero-leaving .roll-balance {
 
 .gallery-item img {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
   display: block;
 }

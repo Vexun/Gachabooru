@@ -59,7 +59,9 @@ completely safe for work. There is no rating setting.
 
 Banked images are stored under `collections/<banner_tag>/`. Open the
 Collection page (via the header link) to browse them in a gallery, newest
-first, with a Load more button for large collections. Click an image for
+first. The gallery shows 20 images per page in a 5-column grid of 3:4
+thumbnails. A pager under the grid moves to the first, previous, next, and
+last page. It also jumps straight to any page number. Click an image for
 a full-size view. Delete an image to remove its file and metadata; the
 image becomes eligible for future rolls. Images whose download is still
 pending are marked with a small badge; they are retried automatically

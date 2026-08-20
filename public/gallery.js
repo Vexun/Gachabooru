@@ -1,6 +1,6 @@
 'use strict';
 
-function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
+function createGallery({ document, fetch: fetchImpl, pageSize = 20 }) {
   const root = document.createElement('div');
   root.className = 'gallery';
 
@@ -14,11 +14,38 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   const grid = document.createElement('div');
   grid.className = 'gallery-grid';
 
-  const loadMoreBtn = document.createElement('button');
-  loadMoreBtn.type = 'button';
-  loadMoreBtn.className = 'gallery-more';
-  loadMoreBtn.textContent = 'Load more';
-  loadMoreBtn.hidden = true;
+  const pager = document.createElement('nav');
+  pager.className = 'gallery-pager';
+  pager.hidden = true;
+
+  const pageFirstBtn = document.createElement('button');
+  pageFirstBtn.type = 'button';
+  pageFirstBtn.className = 'pager-first';
+  pageFirstBtn.textContent = '\u00ab';
+  pageFirstBtn.setAttribute('aria-label', 'First page');
+
+  const pagePrevBtn = document.createElement('button');
+  pagePrevBtn.type = 'button';
+  pagePrevBtn.className = 'pager-prev';
+  pagePrevBtn.textContent = '\u2039';
+  pagePrevBtn.setAttribute('aria-label', 'Previous page');
+
+  const pagesEl = document.createElement('div');
+  pagesEl.className = 'pager-pages';
+
+  const pageNextBtn = document.createElement('button');
+  pageNextBtn.type = 'button';
+  pageNextBtn.className = 'pager-next';
+  pageNextBtn.textContent = '\u203a';
+  pageNextBtn.setAttribute('aria-label', 'Next page');
+
+  const pageLastBtn = document.createElement('button');
+  pageLastBtn.type = 'button';
+  pageLastBtn.className = 'pager-last';
+  pageLastBtn.textContent = '\u00bb';
+  pageLastBtn.setAttribute('aria-label', 'Last page');
+
+  pager.append(pageFirstBtn, pagePrevBtn, pagesEl, pageNextBtn, pageLastBtn);
 
   const detail = document.createElement('div');
   detail.className = 'gallery-detail';
@@ -65,10 +92,10 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     closeBtn,
     nextBtn,
   );
-  root.append(heading, grid, emptyEl, loadMoreBtn, detail);
+  root.append(heading, grid, emptyEl, pager, detail);
 
   let items = [];
-  let page = 0;
+  let page = 1;
   let total = 0;
   let loading = false;
   let detailItem = null;
@@ -79,9 +106,33 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     return `/collections/${item.file_path}`;
   }
 
-  function updateLoadMore() {
-    loadMoreBtn.disabled = loading;
-    loadMoreBtn.hidden = page * pageSize >= total;
+  function pageCount() {
+    return Math.max(1, Math.ceil(total / pageSize));
+  }
+
+  function globalIndex() {
+    return (page - 1) * pageSize + detailIndex;
+  }
+
+  // Always show page 1 and the last page, plus the pages around the
+  // current one. Insert an ellipsis wherever the page numbers jump.
+  function pageWindow(current, count) {
+    const pages = new Set([1, count]);
+    for (let p = current - 2; p <= current + 2; p++) {
+      if (p >= 1 && p <= count) {
+        pages.add(p);
+      }
+    }
+    const sorted = [...pages].sort((a, b) => a - b);
+    const entries = [];
+    for (const p of sorted) {
+      const last = entries[entries.length - 1];
+      if (last && last.page !== undefined && p - last.page > 1) {
+        entries.push({ ellipsis: true });
+      }
+      entries.push({ page: p });
+    }
+    return entries;
   }
 
   function render() {
@@ -105,11 +156,44 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
       card.addEventListener('click', () => openDetail(item));
       grid.append(card);
     }
-    updateLoadMore();
+    renderPager();
   }
 
-  function hasMore() {
-    return page * pageSize < total;
+  function renderPager() {
+    const count = pageCount();
+    pager.hidden = count <= 1;
+    if (pager.hidden) {
+      return;
+    }
+    pageFirstBtn.disabled = loading || page <= 1;
+    pagePrevBtn.disabled = loading || page <= 1;
+    pageNextBtn.disabled = loading || page >= count;
+    pageLastBtn.disabled = loading || page >= count;
+
+    pagesEl.textContent = '';
+    for (const entry of pageWindow(page, count)) {
+      if (entry.ellipsis) {
+        const ellipsis = document.createElement('span');
+        ellipsis.className = 'pager-ellipsis';
+        ellipsis.textContent = '\u2026';
+        pagesEl.append(ellipsis);
+        continue;
+      }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'page-number';
+      btn.textContent = String(entry.page);
+      if (entry.page === page) {
+        btn.classList.add('page-current');
+        btn.setAttribute('aria-current', 'page');
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', () => {
+          goToPage(entry.page);
+        });
+      }
+      pagesEl.append(btn);
+    }
   }
 
   function renderDetail() {
@@ -125,10 +209,10 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     detailMeta.textContent = `${item.banner_tag} — earned ${new Date(
       item.earned_at,
     ).toLocaleString()}`;
-    detailCounter.textContent = `${detailIndex + 1} of ${total}`;
+    detailCounter.textContent = `${globalIndex() + 1} of ${total}`;
     postLink.href = item.danbooru_url || '#';
-    prevBtn.disabled = detailIndex <= 0;
-    nextBtn.disabled = detailIndex >= items.length - 1 && !hasMore();
+    prevBtn.disabled = globalIndex() <= 0;
+    nextBtn.disabled = globalIndex() >= total - 1;
   }
 
   function openDetail(item) {
@@ -140,30 +224,40 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     detail.hidden = false;
   }
 
-  function goPrev() {
-    if (detailIndex <= 0 || detail.hidden) {
+  async function goPrev() {
+    if (detail.hidden || detailIndex < 0) {
       return;
     }
-    detailIndex -= 1;
-    renderDetail();
+    if (detailIndex > 0) {
+      detailIndex -= 1;
+      renderDetail();
+      return;
+    }
+    if (page > 1) {
+      const loaded = await goToPage(page - 1);
+      if (loaded && items.length > 0) {
+        detailIndex = items.length - 1;
+        renderDetail();
+      }
+    }
   }
 
   async function goNext() {
     if (detail.hidden || detailIndex < 0) {
       return;
     }
-    if (detailIndex >= items.length - 1) {
-      if (hasMore()) {
-        await loadMore();
-        if (detailIndex < items.length - 1) {
-          detailIndex += 1;
-          renderDetail();
-        }
-      }
+    if (detailIndex < items.length - 1) {
+      detailIndex += 1;
+      renderDetail();
       return;
     }
-    detailIndex += 1;
-    renderDetail();
+    if (page < pageCount()) {
+      const loaded = await goToPage(page + 1);
+      if (loaded && items.length > 0) {
+        detailIndex = 0;
+        renderDetail();
+      }
+    }
   }
 
   function closeDetail() {
@@ -178,9 +272,10 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     if (!res.ok) {
       return false;
     }
-    items = items.filter((item) => item.post_id !== postId);
     total = Math.max(0, total - 1);
-    render();
+    // Deleting an entry shifts later entries up a page slot; refetch the
+    // current page so the grid matches the server again.
+    await goToPage(page, { force: true });
     return true;
   }
 
@@ -192,45 +287,33 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     return res.json();
   }
 
-  async function load() {
+  async function goToPage(target, opts = {}) {
+    const clamped = Math.min(Math.max(1, target), pageCount());
+    if (loading || (!opts.force && clamped === page && items.length > 0)) {
+      return false;
+    }
     loading = true;
-    updateLoadMore();
+    renderPager();
+    let loaded = false;
     try {
-      const data = await fetchPage(1);
+      const data = await fetchPage(clamped);
       if (data) {
         items = data.entries || [];
-        page = 1;
+        page = clamped;
         total = typeof data.total === 'number' ? data.total : items.length;
+        loaded = true;
       }
     } catch {
-      // gallery stays empty on failure
+      // keep the current page on failure
     } finally {
       loading = false;
     }
     render();
+    return loaded;
   }
 
-  async function loadMore() {
-    if (loading) {
-      return;
-    }
-    loading = true;
-    updateLoadMore();
-    try {
-      const data = await fetchPage(page + 1);
-      if (data) {
-        items = items.concat(data.entries || []);
-        page += 1;
-        if (typeof data.total === 'number') {
-          total = data.total;
-        }
-      }
-    } catch {
-      // keep the loaded items on failure
-    } finally {
-      loading = false;
-    }
-    render();
+  function load() {
+    return goToPage(1, { force: true });
   }
 
   deleteBtn.addEventListener('click', () => {
@@ -254,10 +337,18 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   nextBtn.addEventListener('click', () => {
     goNext();
   });
-  loadMoreBtn.addEventListener('click', () => {
-    loadMore();
+  pageFirstBtn.addEventListener('click', () => {
+    goToPage(1);
   });
-
+  pagePrevBtn.addEventListener('click', () => {
+    goToPage(page - 1);
+  });
+  pageNextBtn.addEventListener('click', () => {
+    goToPage(page + 1);
+  });
+  pageLastBtn.addEventListener('click', () => {
+    goToPage(pageCount());
+  });
   document.addEventListener('keydown', (event) => {
     if (detail.hidden) {
       return;
@@ -280,7 +371,7 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
   return {
     el: root,
     load,
-    loadMore,
+    goToPage,
     render,
     openDetail,
     closeDetail,
@@ -291,6 +382,8 @@ function createGallery({ document, fetch: fetchImpl, pageSize = 30 }) {
     getDetail: () => (detailItem ? { ...detailItem } : null),
     getDetailIndex: () => detailIndex,
     isDetailOpen: () => !detail.hidden,
+    getPage: () => page,
+    getPageCount: () => pageCount(),
   };
 }
 

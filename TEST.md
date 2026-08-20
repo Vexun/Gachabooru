@@ -231,12 +231,17 @@ Slice 5 shows the earned collection and supports deletion.
     page past the end, and rejects invalid pagination with 422. `DELETE
     /api/earned/:postId` removes the file and metadata and returns 404 for
     an unknown post, and `collections/` images are served statically.
-  - `test/client/gallery.test.js` — the gallery renders a grid, hides the
-    load-more button when everything fits on one page, loads more pages
-    and appends cards, resets to the first page on reload, shows an empty
-    state, opens a full-size view on click, requires confirmation before
-    deleting (and removes the item afterwards), closes without deleting,
-    and marks images with a pending badge when their file is missing.
+  - `test/client/gallery.test.js` — the gallery renders a grid, defaults
+    to 20 images per page, hides the pager when everything fits on one
+    page, replaces the grid with the target page, disables the pager edge
+    buttons at the boundaries, marks the current page number, keeps the
+    first and last page numbers with ellipses, jumps on the skip buttons,
+    moves one page on next and previous, resets to the first page on
+    reload, shows an empty state, opens a full-size view on click,
+    browses across page boundaries in the full view, requires
+    confirmation before deleting (and refreshes the page afterwards),
+    closes without deleting, and marks images with a pending badge when
+    their file is missing.
   - `test/client/collection.test.js` — the collection page mounts the
     gallery and loads it, and opens the close-detection websocket.
   - `test/client/close-detection.test.js` — the websocket keep-alive
@@ -265,8 +270,10 @@ Slice 5 shows the earned collection and supports deletion.
 10. Confirm `curl "http://127.0.0.1:3000/api/earned"` lists the remaining
     images newest first and `curl -X DELETE .../api/earned/<id>` removes
     one.
-11. Bank more than 30 images and confirm the Collection shows the newest
-    ones first with a "Load more" button that appends the rest.
+11. Bank more than 20 images and confirm the Collection shows the newest
+    20 in a 5-column grid of 3:4 thumbnails. Use the pager to move to the
+    next and previous page, jump with the page numbers, and skip to the
+    first and last page.
 12. Confirm pagination works via the API:
     `curl "http://127.0.0.1:3000/api/earned?limit=2&page=2"` returns the
     next slice with `page`, `limit`, and `total` fields, and

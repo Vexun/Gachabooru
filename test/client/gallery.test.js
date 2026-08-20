@@ -43,6 +43,10 @@ function makeGallery(t, fetchImpl, pageSize = 2) {
   return { gallery, doc };
 }
 
+function settle() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 const twoEntries = [entry(1, '2026-01-01T00:00:00.000Z'), entry(2, '2026-01-02T00:00:00.000Z')];
 
 test('renders a grid of earned images', async (t) => {
@@ -56,12 +60,12 @@ test('renders a grid of earned images', async (t) => {
   assert.equal(items[0].dataset.postId, '1');
 });
 
-test('hides the load more button when everything fits on one page', async (t) => {
+test('hides the pager when everything fits on one page', async (t) => {
   const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
 
   await gallery.load();
 
-  assert.equal(gallery.el.querySelector('.gallery-more').hidden, true);
+  assert.equal(gallery.el.querySelector('.gallery-pager').hidden, true);
 });
 
 test('shows an empty state when there are no items', async (t) => {
@@ -73,25 +77,121 @@ test('shows an empty state when there are no items', async (t) => {
   assert.equal(emptyEl.hidden, false);
   assert.match(emptyEl.textContent, /Nothing collected/);
   assert.equal(gallery.el.querySelectorAll('.gallery-item').length, 0);
+  assert.equal(gallery.el.querySelector('.gallery-pager').hidden, true);
 });
 
-test('loads more pages and appends cards', async (t) => {
-  const all = [1, 2, 3, 4, 5].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+test('defaults to 20 images per page', async () => {
+  const { doc } = createDocument();
+  const urls = [];
+  const all = Array.from({ length: 25 }, (_, i) => entry(i + 1, '2026-01-01T00:00:00.000Z'));
+  const gallery = createGallery({
+    document: doc,
+    fetch: fakeFetch(async (url) => {
+      urls.push(String(url));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ entries: all.slice(0, 20), page: 1, limit: 20, total: 25 }),
+      };
+    }),
+  });
 
   await gallery.load();
-  assert.equal(gallery.getItems().length, 2);
-  const moreBtn = gallery.el.querySelector('.gallery-more');
-  assert.equal(moreBtn.hidden, false);
 
-  await gallery.loadMore();
-  assert.equal(gallery.getItems().length, 4);
-  assert.equal(moreBtn.hidden, false);
+  assert.match(urls[0], /limit=20/);
+  assert.equal(gallery.getItems().length, 20);
+  assert.equal(gallery.getPageCount(), 2);
+});
 
-  await gallery.loadMore();
-  assert.equal(gallery.getItems().length, 5);
-  assert.equal(moreBtn.hidden, true);
-  assert.equal(gallery.el.querySelectorAll('.gallery-item').length, 5);
+test('goToPage replaces the grid with the target page', async (t) => {
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+  assert.deepEqual(gallery.getItems().map((e) => e.post_id), [1, 2]);
+
+  await gallery.goToPage(2);
+
+  assert.equal(gallery.getPage(), 2);
+  assert.deepEqual(gallery.getItems().map((e) => e.post_id), [3, 4]);
+  assert.equal(gallery.el.querySelectorAll('.gallery-item').length, 2);
+});
+
+test('the pager disables the edge buttons at the boundaries', async (t) => {
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  const pager = gallery.el.querySelector('.gallery-pager');
+  assert.equal(pager.hidden, false);
+  assert.equal(pager.querySelector('.pager-first').disabled, true);
+  assert.equal(pager.querySelector('.pager-prev').disabled, true);
+  assert.equal(pager.querySelector('.pager-next').disabled, false);
+  assert.equal(pager.querySelector('.pager-last').disabled, false);
+
+  await gallery.goToPage(2);
+
+  assert.equal(pager.querySelector('.pager-first').disabled, false);
+  assert.equal(pager.querySelector('.pager-prev').disabled, false);
+  assert.equal(pager.querySelector('.pager-next').disabled, true);
+  assert.equal(pager.querySelector('.pager-last').disabled, true);
+});
+
+test('page numbers mark the current page and jump on click', async (t) => {
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  const numbers = gallery.el.querySelectorAll('.page-number');
+  assert.equal(numbers.length, 2);
+  assert.equal(numbers[0].classList.contains('page-current'), true);
+  assert.equal(numbers[0].getAttribute('aria-current'), 'page');
+  assert.equal(numbers[1].classList.contains('page-current'), false);
+
+  numbers[1].click();
+  await settle();
+
+  assert.equal(gallery.getPage(), 2);
+});
+
+test('the pager window keeps the first and last pages with ellipses', async (t) => {
+  const all = Array.from({ length: 16 }, (_, i) => entry(i + 1, '2026-01-01T00:00:00.000Z'));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+  await gallery.goToPage(4);
+
+  const numbers = [...gallery.el.querySelectorAll('.page-number')].map((b) => b.textContent);
+  assert.deepEqual(numbers, ['1', '2', '3', '4', '5', '6', '8']);
+  assert.equal(gallery.el.querySelectorAll('.pager-ellipsis').length, 1);
+});
+
+test('the skip buttons jump to the first and last page', async (t) => {
+  const all = Array.from({ length: 16 }, (_, i) => entry(i + 1, '2026-01-01T00:00:00.000Z'));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  gallery.el.querySelector('.pager-last').click();
+  await settle();
+  assert.equal(gallery.getPage(), 8);
+  assert.deepEqual(gallery.getItems().map((e) => e.post_id), [15, 16]);
+
+  gallery.el.querySelector('.pager-first').click();
+  await settle();
+  assert.equal(gallery.getPage(), 1);
+  assert.deepEqual(gallery.getItems().map((e) => e.post_id), [1, 2]);
+});
+
+test('the next and previous pager buttons move one page', async (t) => {
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+
+  gallery.el.querySelector('.pager-next').click();
+  await settle();
+  assert.equal(gallery.getPage(), 2);
+
+  gallery.el.querySelector('.pager-prev').click();
+  await settle();
+  assert.equal(gallery.getPage(), 1);
 });
 
 test('load resets to the first page', async (t) => {
@@ -99,10 +199,12 @@ test('load resets to the first page', async (t) => {
   const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
 
   await gallery.load();
-  await gallery.loadMore();
-  assert.equal(gallery.getItems().length, 3);
+  await gallery.goToPage(2);
+  assert.equal(gallery.getItems().length, 1);
 
   await gallery.load();
+
+  assert.equal(gallery.getPage(), 1);
   assert.equal(gallery.getItems().length, 2);
   assert.equal(gallery.getItems()[0].post_id, 1);
 });
@@ -134,16 +236,22 @@ test('clicking an item opens the full-size view', async (t) => {
   assert.equal(gallery.el.querySelector('.gallery-post-link').href, 'https://danbooru.donmai.us/posts/2');
 });
 
-test('deleting requires confirmation and removes the item', async (t) => {
+test('deleting requires confirmation and refreshes the page', async (t) => {
   let deleted = null;
+  let entries = [entry(1, '2026-01-01T00:00:00.000Z'), entry(2, '2026-01-02T00:00:00.000Z')];
   const { gallery } = makeGallery(
     t,
     fakeFetch(async (url, opts) => {
       if (opts.method === 'DELETE') {
         deleted = url;
+        entries = entries.filter((e) => e.post_id !== 1);
         return { ok: true, status: 200, json: async () => ({ removed: true }) };
       }
-      return { ok: true, status: 200, json: async () => ({ entries: twoEntries, page: 1, limit: 2, total: 2 }) };
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ entries, page: 1, limit: 2, total: entries.length }),
+      };
     }),
     2,
   );
@@ -161,7 +269,7 @@ test('deleting requires confirmation and removes the item', async (t) => {
 
   assert.equal(deleted, '/api/earned/1');
   assert.equal(gallery.isDetailOpen(), false);
-  assert.equal(gallery.getItems().length, 1);
+  assert.deepEqual(gallery.getItems().map((e) => e.post_id), [2]);
   assert.equal(gallery.el.querySelectorAll('.gallery-item').length, 1);
 });
 
@@ -215,7 +323,7 @@ test('arrow keys navigate and Escape closes the detail view', async (t) => {
   assert.equal(gallery.getDetailIndex(), -1);
 });
 
-test('next at the end of a page loads more and continues', async (t) => {
+test('next at the end of a page loads the next page and continues', async (t) => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
   const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
   await gallery.load();
@@ -228,14 +336,32 @@ test('next at the end of a page loads more and continues', async (t) => {
   assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '2 of 4');
 
   await gallery.goNext();
-  assert.equal(gallery.getDetailIndex(), 2);
+  assert.equal(gallery.getPage(), 2);
+  assert.equal(gallery.getDetailIndex(), 0);
   assert.equal(gallery.getDetail().post_id, 3);
   assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '3 of 4');
 
   await gallery.goNext();
-  assert.equal(gallery.getDetailIndex(), 3);
+  assert.equal(gallery.getDetailIndex(), 1);
   assert.equal(gallery.getDetail().post_id, 4);
   assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '4 of 4');
+});
+
+test('prev at the start of a page loads the previous page from its end', async (t) => {
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  await gallery.load();
+  await gallery.goToPage(2);
+
+  gallery.openDetail(all[2]);
+  assert.equal(gallery.getDetailIndex(), 0);
+
+  await gallery.goPrev();
+
+  assert.equal(gallery.getPage(), 1);
+  assert.equal(gallery.getDetailIndex(), 1);
+  assert.equal(gallery.getDetail().post_id, 2);
+  assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '2 of 4');
 });
 
 test('prev is disabled at the first image', async (t) => {
