@@ -32,6 +32,7 @@ function createRoll({
   const SLIDE_DURATION_MS = 600;
   const FLIP_DURATION_MS = 600;
   const COIN_DURATION_MS = 900;
+  const COIN_MAX_DURATION_MS = 3000;
   const RESOLVE_DELAY_MS = 600;
   const WIN_PAUSE_MS = 2000;
   const LOSS_LOCKOUT_MS = 2000;
@@ -478,12 +479,19 @@ function createRoll({
     panelTimer = setTimeoutImpl(onLeave, PANEL_SLIDE_MS + FALLBACK_BUFFER_MS);
   }
 
+  function coinDurationMs() {
+    const span = COIN_MAX_DURATION_MS - COIN_DURATION_MS;
+    return COIN_DURATION_MS + Math.floor(random() * span);
+  }
+
   function animateCoin(result, callback) {
     if (flipping) {
       return;
     }
     flipping = true;
     flipBtn.disabled = true;
+    const durationMs = coinDurationMs();
+    coin.style.animationDuration = `${durationMs}ms`;
     coin.classList.add('flipping');
     const onSettled = () => {
       if (!flipping) {
@@ -494,6 +502,7 @@ function createRoll({
         clearTimeoutImpl(coinTimer);
         coinTimer = null;
       }
+      coin.style.animationDuration = '';
       coin.classList.remove('flipping');
       coin.classList.add(result === 'heads' ? 'show-heads' : 'show-tails');
       resolveTimer = setTimeoutImpl(() => {
@@ -503,7 +512,7 @@ function createRoll({
       }, RESOLVE_DELAY_MS);
     };
     coin.addEventListener('animationend', onSettled, { once: true });
-    coinTimer = setTimeoutImpl(onSettled, COIN_DURATION_MS + FALLBACK_BUFFER_MS);
+    coinTimer = setTimeoutImpl(onSettled, durationMs + FALLBACK_BUFFER_MS);
   }
 
   function setCall(side) {

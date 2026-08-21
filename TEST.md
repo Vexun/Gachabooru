@@ -549,6 +549,9 @@ active card while dimming the others, and slides the flip panel in. See
     card is focused.
   - Clicking Flip adds `.flipping` to the coin, disables the flip button,
     and a second press during the spin is ignored.
+  - The spin duration is random per flip between 900 ms and 3000 ms: the
+    inline `animation-duration` and the fallback timer match the picked
+    duration, and settling clears the inline duration.
   - Dispatching `animationend` on the coin settles it, waits for the
     resolution pause, then announces the face through the `.flip-live`
     region and resolves the flip (a win records a pending win; a tails
@@ -565,7 +568,8 @@ active card while dimming the others, and slides the flip panel in. See
    glow while the other covered cards dim.
 5. Click Heads or Tails, then click Flip.
 6. Confirm the coin spins fast, decelerates visibly, and settles on the
-   result face.
+   result face. The spin length varies per flip between about 0.9 and
+   3 seconds.
 7. Confirm the coin holds on the settled face for about 0.6 seconds,
    then the outcome lands: the card reveals and the result text appears.
 8. Win two cards and confirm both won images stay bright while the next

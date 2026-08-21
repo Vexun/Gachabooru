@@ -685,6 +685,43 @@ test('a second Flip press during the coin spin is ignored', async (t) => {
   assert.equal(coin.classList.contains('flipping'), true);
 });
 
+test('the coin spin duration starts at 900ms and clears on settle', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  roll.el.querySelector('.flip-button').click();
+
+  assert.equal(coin.style.animationDuration, '900ms');
+  assert.ok(timers.pending().includes(1100), 'fallback timer matches the minimum duration');
+
+  coin.dispatchEvent({ type: 'animationend' });
+
+  assert.equal(coin.style.animationDuration, '');
+});
+
+test('the coin spin duration reaches the 3000ms maximum', async (t) => {
+  // Four shuffle reads, one fair-coin read, then the duration read.
+  const seq = [0, 0, 0, 0, 0, 1];
+  let call = -1;
+  const { roll, timers } = coveredRoll(
+    t,
+    fakeFetch({ posts: fivePosts }),
+    () => seq[++call] ?? 0,
+  );
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  roll.el.querySelector('.flip-button').click();
+
+  assert.equal(coin.style.animationDuration, '3000ms');
+  assert.ok(timers.pending().includes(3200), 'fallback timer matches the maximum duration');
+});
+
 test('a win reveals the card and records a pending win', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
