@@ -33,6 +33,7 @@ function createRoll({
   const FLIP_DURATION_MS = 600;
   const COIN_DURATION_MS = 900;
   const COIN_MAX_DURATION_MS = 3000;
+  const COIN_LONG_SPIN_MS = 1950;
   const RESOLVE_DELAY_MS = 600;
   const WIN_PAUSE_MS = 2000;
   const LOSS_LOCKOUT_MS = 2000;
@@ -497,6 +498,13 @@ function createRoll({
     flipBtn.disabled = true;
     const durationMs = coinDurationMs();
     coin.style.animationDuration = `${durationMs}ms`;
+    // The spin's keyframes end on the actual result face, so the settle
+    // switch below never has to jump to the other side.
+    coin.classList.remove('to-heads', 'to-tails', 'spin-long');
+    coin.classList.add(result === 'heads' ? 'to-heads' : 'to-tails');
+    if (durationMs >= COIN_LONG_SPIN_MS) {
+      coin.classList.add('spin-long');
+    }
     coin.classList.add('flipping');
     const onSettled = () => {
       if (!flipping) {

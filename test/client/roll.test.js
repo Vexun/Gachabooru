@@ -724,6 +724,70 @@ test('the coin spin duration reaches the 3000ms maximum', async (t) => {
   assert.ok(timers.pending().includes(3200), 'fallback timer matches the maximum duration');
 });
 
+test('a short heads flip spins toward the heads face', async (t) => {
+  // Four shuffle reads, one fair-coin read, then the duration read.
+  const seq = [0, 0, 0, 0, 0, 0];
+  let call = -1;
+  const { roll } = coveredRoll(
+    t,
+    fakeFetch({ posts: fivePosts }),
+    () => seq[++call] ?? 0,
+  );
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  roll.el.querySelector('.flip-button').click();
+
+  assert.equal(coin.classList.contains('to-heads'), true);
+  assert.equal(coin.classList.contains('to-tails'), false);
+  assert.equal(coin.classList.contains('spin-long'), false);
+});
+
+test('a short tails flip spins toward the tails face', async (t) => {
+  const seq = [0, 0, 0, 0, 1, 0];
+  let call = -1;
+  const { roll } = coveredRoll(
+    t,
+    fakeFetch({ posts: fivePosts }),
+    () => seq[++call] ?? 0,
+  );
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('tails');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  roll.el.querySelector('.flip-button').click();
+
+  assert.equal(coin.classList.contains('to-tails'), true);
+  assert.equal(coin.classList.contains('to-heads'), false);
+  assert.equal(coin.classList.contains('spin-long'), false);
+});
+
+test('a long flip adds the extra-spin class', async (t) => {
+  const seq = [0, 0, 0, 0, 0, 0.8];
+  let call = -1;
+  const { roll } = coveredRoll(
+    t,
+    fakeFetch({ posts: fivePosts }),
+    () => seq[++call] ?? 0,
+  );
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  roll.el.querySelector('.flip-button').click();
+
+  assert.equal(coin.classList.contains('spin-long'), true);
+  assert.equal(coin.classList.contains('to-heads'), true);
+
+  coin.dispatchEvent({ type: 'animationend' });
+
+  assert.equal(coin.classList.contains('show-heads'), true);
+});
+
 test('a win reveals the card and records a pending win', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();

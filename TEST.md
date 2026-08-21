@@ -552,6 +552,9 @@ active card while dimming the others, and slides the flip panel in. See
   - The spin duration is random per flip between 900 ms and 3000 ms: the
     inline `animation-duration` and the fallback timer match the picked
     duration, and settling clears the inline duration.
+  - The spin's keyframes end on the actual result face through the
+    `to-heads` / `to-tails` classes (no last-instant side switch), and
+    flips of 1950 ms or longer add the extra-turn `spin-long` class.
   - Dispatching `animationend` on the coin settles it, waits for the
     resolution pause, then announces the face through the `.flip-live`
     region and resolves the flip (a win records a pending win; a tails
@@ -569,9 +572,11 @@ active card while dimming the others, and slides the flip panel in. See
 5. Click Heads or Tails, then click Flip.
 6. Confirm the coin has a minted-metal look: a sheened rim on both faces,
    an embossed gacha star on the gold heads face, and an embossed tag on
-   the silver tails face, with a soft ground shadow below. Confirm both
-   motifs stay legible through the spin and settle on the result face.
-   The spin length varies per flip between about 0.9 and 3 seconds.
+   the silver tails face, with a soft ground shadow below. Confirm the
+   spin always decelerates onto the correct result face with no
+   last-instant switch, that short flips turn fewer times than long
+   ones, and that it settles on the result face. The spin length varies
+   per flip between about 0.9 and 3 seconds.
 7. Confirm the coin holds on the settled face for about 0.6 seconds,
    then the outcome lands: the card reveals and the result text appears.
 8. Win two cards and confirm both won images stay bright while the next

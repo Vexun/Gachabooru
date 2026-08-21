@@ -801,8 +801,30 @@ body.hero-leaving .roll-balance {
 }
 
 .coin.flipping {
-  animation: coinFlip 0.9s cubic-bezier(0.2, 0.7, 0.15, 1);
+  animation-duration: 0.9s;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.15, 1);
   will-change: transform;
+}
+
+/* End angles are multiples of a half turn so the resting transform of
+   .show-heads (0deg) or .show-tails (180deg) matches mod 360 — the coin
+   decelerates onto the actual result face instead of snapping to it.
+   Short flips use ~5 turns; long flips use more turns so the angular
+   speed stays similar across the randomized duration. */
+.coin.flipping.to-heads {
+  animation-name: coinFlipToHeads;
+}
+
+.coin.flipping.to-tails {
+  animation-name: coinFlipToTails;
+}
+
+.coin.flipping.spin-long.to-heads {
+  animation-name: coinFlipLongToHeads;
+}
+
+.coin.flipping.spin-long.to-tails {
+  animation-name: coinFlipLongToTails;
 }
 
 .coin.show-heads {
@@ -823,9 +845,24 @@ body.hero-leaving .roll-balance {
   50%      { box-shadow: 0 0 16px rgba(255, 215, 0, 0.6); }
 }
 
-@keyframes coinFlip {
+@keyframes coinFlipToHeads {
   from { transform: rotateX(0); }
   to   { transform: rotateX(1800deg); }
+}
+
+@keyframes coinFlipToTails {
+  from { transform: rotateX(0); }
+  to   { transform: rotateX(1620deg); }
+}
+
+@keyframes coinFlipLongToHeads {
+  from { transform: rotateX(0); }
+  to   { transform: rotateX(2880deg); }
+}
+
+@keyframes coinFlipLongToTails {
+  from { transform: rotateX(0); }
+  to   { transform: rotateX(2700deg); }
 }
 
 @keyframes panelSlideUp {
