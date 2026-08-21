@@ -1,124 +1,133 @@
 # Gachabooru
 
-A local single-user gacha game over Danbooru images.
+Gachabooru is a local, single-user gacha game built on images from
+Danbooru.
 
-Pick a Danbooru tag as your banner. Draw 5 top-scored images, peek at
-them briefly, then flip a coin on each card. Win the flip to keep the
-card. Lose the flip to lose the roll. Back out after a win to bank your
-earnings.
+Pick a tag as your banner and draw five of its top-scored images. Peek
+at them briefly, then call heads or tails as each card flips. If your
+call matches, you keep the card. If it doesn't match, the roll ends and
+you lose that roll's pending wins. Back out after a win to bank what
+you earned.
 
 ## Setup
 
-Requirements:
+You need:
 
-- Node.js 20 or newer (built-in `fetch`).
-- npm.
+- Node.js 20 or newer (it includes `fetch`)
+- npm
 
-Install and run:
+To install and start the app:
 
 ```sh
 npm install
 npm start
 ```
 
-`npm start` starts the server and opens the app in your default browser at
-`http://127.0.0.1:3000`. It works on Windows, macOS, and Linux. To run the
-server without opening a browser, use `npm run serve` instead. You can also
-run the launcher directly with `node run.js`.
+`npm start` starts the server and opens the app in your default browser
+at `http://127.0.0.1:3000`. The app runs on Windows, macOS, and Linux.
+If you want the server without the browser, use `npm run serve`
+instead. You can also start the launcher directly with `node run.js`.
 
-When launched with `npm start` (or `node run.js`), the server shuts itself
-down a few seconds after you close the browser tab. Closing the tab ends
-the whole app — you do not need to stop it in the terminal. Refreshing the
-page or keeping several tabs open does not stop the server. With
-`npm run serve`, the server stays up until you stop it.
+When you launch the app with `npm start` or `node run.js`, the server
+shuts down a few seconds after you close the browser tab. You don't
+need to stop anything in the terminal. Refreshing the page or keeping
+several tabs open keeps the server running. With `npm run serve`, the
+server stays up until you stop it yourself.
 
 ## How to play
 
-The app only shows general-rated posts, which Danbooru classifies as
-completely safe for work. There is no rating setting.
+The app shows general-rated posts only. Danbooru classifies these posts
+as suitable for everyone, so there's no rating setting.
 
-1. Search for a tag (character, copyright, or general) and select it as
-   your banner.
-2. Click Roll. A roll costs one roll from your balance.
-3. Watch the 5-card peek for 3 seconds. The cards then turn over.
-4. For each card in a random order, call heads or tails and flip.
-   - A match keeps the card.
-   - A mismatch ends the roll and erases this roll's pending wins.
-5. After a win, back out to bank the earned images, or keep going.
-   Winning all 5 banks all 5.
+1. Search for a tag (character, copyright, or general), then select it
+   as your banner.
+2. Click **Roll**. A roll costs one roll from your balance.
+3. Watch the peek: all five cards reveal their images for 3 seconds,
+   then turn face-down.
+4. For each card in random order, call heads or tails, then flip.
+   - If your call matches, you keep the card.
+   - If it doesn't match, the roll ends and this roll's pending wins
+     are gone.
+5. After a win, click **Back out & bank** to keep your wins, or keep
+   flipping. If you win all five, the game banks all five.
 
 ## Economy
 
-- First launch grants a one-time bonus of 50 rolls.
-- The balance accrues 5 rolls per whole hour, capped at 200.
-- At each 24-hour boundary, if the balance is at or below 200, grant 10
-  more rolls (up to 210).
-- Balance never drops below 0.
+- Your first launch grants a one-time bonus of 50 rolls.
+- The balance grows by 5 rolls every whole hour, up to a cap of 200.
+- At each 24-hour boundary, if your balance is 200 or less, the game
+  adds 10 rolls (up to 210).
+- The balance never drops below 0.
 
 ## Collection
 
-Banked images are stored under `collections/<banner_tag>/`. Open the
-Collection page (via the header link) to browse them in a gallery, newest
-first. The gallery shows 20 images per page in a 5-column grid of 3:4
-thumbnails. A pager under the grid moves to the first, previous, next, and
-last page. It also jumps straight to any page number. Click an image for
-a full-size view. Delete an image to remove its file and metadata; the
-image becomes eligible for future rolls. Images whose download is still
-pending are marked with a small badge; they are retried automatically
-(see below).
+Banked images are stored under `collections/<banner_tag>/`.
+
+To browse them, select **Collection** in the header. The gallery shows
+the newest images first, 20 per page in a five-column grid of 3:4
+thumbnails. The pager under the grid jumps to the first, previous,
+next, or last page, or straight to any page number.
+
+Click an image to view it at full size. To remove an image, click
+**Delete**: the app deletes the file and its metadata, and the image
+becomes eligible for future rolls again. Images whose download is still
+pending carry a small badge; the app retries those downloads
+automatically.
 
 ## Data
 
-The collection and balance live in `data/state.json`. Each save also
-writes a backup to `data/state.json.bak`. If the state file is ever
-corrupted, the app recovers from the backup on startup; if no backup is
-available it starts fresh and preserves the broken file as
-`data/state.json.corrupt` for inspection.
+Your collection and balance live in `data/state.json`. Every save also
+writes a backup to `data/state.json.bak`. If the state file is
+corrupted, the app recovers from the backup at startup. If no valid
+backup exists, the app starts fresh and preserves the broken file as
+`data/state.json.corrupt` so you can inspect it.
 
 ## Configuration
 
-Environment variables:
+You can set these environment variables:
 
-- `GACHABOORU_UA` — optional User-Agent override for Danbooru API
-  requests. Defaults to a generic app identifier.
-- `PORT` — the port to bind on. Defaults to 3000.
+- `GACHABOORU_UA`: optional User-Agent override for requests to the
+  Danbooru API. Default: a generic app identifier.
+- `PORT`: the port to bind on. Default: `3000`.
 
-The app binds to localhost only.
+The server accepts connections from localhost only.
 
 ## Danbooru API
 
-The app uses the public Danbooru API. Requests are throttled to about 1
-per second to respect rate limits. Image downloads may be challenged by
-the CDN; failed downloads are queued and retried automatically when the
-app starts and periodically while it runs.
+The app uses the public Danbooru API and sends about one request per
+second at most, to respect its rate limits. The CDN sometimes
+challenges image downloads. When a download fails, the app queues the
+image and retries it at startup and periodically while it runs.
 
 ## Security
 
 Responses include a Content-Security-Policy that allows only the app's
-own scripts and styles, local images, and images from `cdn.donmai.us`,
-plus the same-origin API and close-detection WebSocket. Companion headers
-(`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`) are
-set too. The API is rate-limited to 120 requests per 10 seconds
-(`/api/health` is exempt); a limit breach returns 429. The app binds to
-localhost only, so this is defense in depth.
+own scripts and styles, local images, images from `cdn.donmai.us`, and
+same-origin connections for the API and the close-detection WebSocket.
+Responses also set `X-Content-Type-Options: nosniff` and
+`Referrer-Policy: no-referrer`. The API allows up to 120 requests in
+any 10-second window and returns 429 beyond that limit;
+`/api/health` is exempt. Because the server accepts localhost
+connections only, these measures act as a second line of defense
+behind your machine's own network boundary.
 
 ## Content disclaimer
 
-The app filters to general-rated posts only (completely safe for work).
-The gallery and rolls still reflect the content of the tags you choose.
-You are responsible for the content you browse. Keep this app private and
-do not share collections that contain sensitive material.
+The app shows general-rated posts only, which are completely safe for
+work. Rolls and the gallery still reflect the tags you choose, so you
+are responsible for the content you browse. Keep the app private, and
+don't share collections that contain sensitive material.
 
 ## Development
 
-- Tests: `npm test` (`node:test` for the server, a minimal DOM harness
-  for the client).
-- Lint: `npm run lint` (`oxlint`).
-- Accessibility: the play page respects the OS-level
-  `prefers-reduced-motion` setting. With it enabled, all animations
-  become instant. Keyboard focus is managed across the roll, flip, and
-  bank phases.
+- Tests: run `npm test`. Server tests use `node:test`; client tests
+  use a minimal DOM harness.
+- Lint: run `npm run lint` (`oxlint`).
 - Testing instructions: see `TEST.md`.
+- Accessibility: the play page respects the system-level
+  `prefers-reduced-motion` setting and makes every animation instant
+  when it's enabled. The page manages keyboard focus across the roll,
+  flip, and bank phases.
 
 ## License
 
