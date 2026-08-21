@@ -555,6 +555,9 @@ active card while dimming the others, and slides the flip panel in. See
   - The spin's keyframes end on the actual result face through the
     `to-heads` / `to-tails` classes (no last-instant side switch), and
     flips of 1950 ms or longer add the extra-turn `spin-long` class.
+  - A spinner overlay shows while the roll pool and card images load and
+    hides when the slide-in begins, on a failed pool request, and on any
+    roll reset.
   - Dispatching `animationend` on the coin settles it, waits for the
     resolution pause, then announces the face through the `.flip-live`
     region and resolves the flip (a win records a pending win; a tails
@@ -567,23 +570,25 @@ active card while dimming the others, and slides the flip panel in. See
 1. Start the app with `npm start`.
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Roll and play through to the flip sequence.
-4. Confirm the flip panel slides up and the active card scales up with a
+4. Confirm a spinning accent-blue ring appears while the roll loads and
+   fades away quickly as the cards begin sliding in.
+5. Confirm the flip panel slides up and the active card scales up with a
    glow while the other covered cards dim.
-5. Click Heads or Tails, then click Flip.
-6. Confirm the coin has a minted-metal look: a sheened rim on both faces,
+6. Click Heads or Tails, then click Flip.
+7. Confirm the coin has a minted-metal look: a sheened rim on both faces,
    an embossed gacha star on the gold heads face, and an embossed tag on
    the silver tails face, with a soft ground shadow below. Confirm the
    spin always decelerates onto the correct result face with no
    last-instant switch, that short flips turn fewer times than long
    ones, and that it settles on the result face. The spin length varies
    per flip between about 0.9 and 3 seconds.
-7. Confirm the coin holds on the settled face for about 0.6 seconds,
+8. Confirm the coin holds on the settled face for about 0.6 seconds,
    then the outcome lands: the card reveals and the result text appears.
-8. Win two cards and confirm both won images stay bright while the next
+9. Win two cards and confirm both won images stay bright while the next
    card is focused.
-9. Confirm a mismatch ends the roll and hides the panel.
-10. Confirm the coin result is announced to screen readers.
-11. Enable `prefers-reduced-motion` in the OS settings and confirm the
+10. Confirm a mismatch ends the roll and hides the panel.
+11. Confirm the coin result is announced to screen readers.
+12. Enable `prefers-reduced-motion` in the OS settings and confirm the
     coin flip is instant.
 
 ### Slice 4 — Win/Loss Micro-Animations

@@ -217,6 +217,28 @@ test('an errored image also counts as settled', async (t) => {
   assert.equal(roll.getState(), 'entering');
 });
 
+test('a spinner shows during the roll and fades at the slide-in', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  const loading = roll.el.querySelector('.roll-loading');
+  assert.equal(loading.classList.contains('is-visible'), false);
+
+  await roll.startRoll();
+  assert.equal(loading.classList.contains('is-visible'), true);
+
+  settleImages(roll);
+
+  assert.equal(loading.classList.contains('is-visible'), false);
+});
+
+test('the spinner hides when the pool request fails', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ error: 'insufficient balance' }, 402), () => 0);
+
+  await roll.startRoll();
+
+  const loading = roll.el.querySelector('.roll-loading');
+  assert.equal(loading.classList.contains('is-visible'), false);
+});
+
 test('renderCards maps the post score to a rarity class', async (t) => {
   const posts = [
     post(1, 150),

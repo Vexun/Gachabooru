@@ -64,6 +64,13 @@ function createRoll({
   const grid = document.createElement('div');
   grid.className = 'roll-grid';
 
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'roll-loading';
+  loadingEl.setAttribute('aria-hidden', 'true');
+  const spinner = document.createElement('div');
+  spinner.className = 'roll-spinner';
+  loadingEl.append(spinner);
+
   const errorEl = document.createElement('div');
   errorEl.className = 'roll-error';
   errorEl.hidden = true;
@@ -139,7 +146,7 @@ function createRoll({
   const lossEl = document.createElement('div');
   lossEl.className = 'roll-loss';
 
-  root.append(bannerLabel, balanceEl, button, grid, flipPanel, lossEl, resultsEl, errorEl);
+  root.append(bannerLabel, balanceEl, button, grid, loadingEl, flipPanel, lossEl, resultsEl, errorEl);
 
   let banner = null;
   let posts = [];
@@ -173,6 +180,14 @@ function createRoll({
     button.classList.toggle('loading', loading);
     button.textContent = loading ? 'Summoning\u2026' : 'Roll';
     button.disabled = loading || !banner || balance < 1;
+  }
+
+  function showLoading() {
+    loadingEl.classList.add('is-visible');
+  }
+
+  function hideLoading() {
+    loadingEl.classList.remove('is-visible');
   }
 
   function setBanner(tag) {
@@ -256,6 +271,7 @@ function createRoll({
 
   function beginEntrance() {
     state = 'entering';
+    hideLoading();
     for (const card of cards) {
       card.classList.remove('pre-entry');
       card.classList.add('entering');
@@ -701,6 +717,7 @@ function createRoll({
   }
 
   function clearRollUi() {
+    hideLoading();
     flipPanel.classList.remove('is-visible');
     flipPanel.classList.remove('is-leaving');
     grid.classList.remove('exit-up');
@@ -772,6 +789,7 @@ function createRoll({
     errorEl.hidden = true;
     cancelCover();
     clearRollUi();
+    showLoading();
     setRollLoading(true);
     if (onRollStart) {
       await onRollStart();
@@ -786,6 +804,7 @@ function createRoll({
       const nextPosts = await requestPool();
       setRollLoading(false);
       if (!nextPosts) {
+        hideLoading();
         if (onRollFail) {
           onRollFail();
         }
@@ -795,6 +814,7 @@ function createRoll({
       return nextPosts;
     } catch (err) {
       setRollLoading(false);
+      hideLoading();
       showError(`Network error: ${err.message}`);
       if (onRollFail) {
         onRollFail();
