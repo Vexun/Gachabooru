@@ -545,8 +545,11 @@ active card while dimming the others, and slides the flip panel in. See
     faces.
   - The flip panel shows via the `.is-visible` class, and the active card
     gets `.focused` while the other covered cards get `.dimmed`.
-  - Won cards stay bright (no `.dimmed`, no `.focused`) while the next
-    card is focused.
+   - Won cards stay bright (no `.dimmed`, no `.focused`) while the next
+     card is focused.
+   - Cards next to the focused card slide apart through `shift-left` /
+     `shift-right` so the gap to the expanded card stays constant; the
+     shifts follow each new active card and clear on a loss.
   - Clicking Flip adds `.flipping` to the coin, disables the flip button,
     and a second press during the spin is ignored.
   - The spin duration is random per flip between 900 ms and 3000 ms: the
@@ -578,7 +581,8 @@ active card while dimming the others, and slides the flip panel in. See
    changes, and on a reroll after a loss it fades in only after the old
    cards have moved up and out.
 5. Confirm the flip panel slides up and the active card scales up with a
-   glow while the other covered cards dim.
+   glow while the other covered cards dim, and the neighbors slide away
+   from the scaled card so the spacing between cards stays even.
 6. Click Heads or Tails, then click Flip.
 7. Confirm the coin has a minted-metal look: a sheened rim on both faces,
    an embossed gacha star on the gold heads face, and an embossed tag on

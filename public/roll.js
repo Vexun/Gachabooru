@@ -406,10 +406,17 @@ function createRoll({
   function focusCard(pos) {
     for (let i = 0; i < cards.length; i++) {
       const card = cards[i];
-      if (card.classList.contains('covered') && i !== pos) {
-        card.classList.add('dimmed');
+      if (i !== pos) {
+        if (card.classList.contains('covered')) {
+          card.classList.add('dimmed');
+        } else {
+          card.classList.remove('dimmed');
+        }
+        // Slide neighbors away so the expanded card keeps an even gap.
+        card.classList.toggle('shift-left', i < pos);
+        card.classList.toggle('shift-right', i > pos);
       } else {
-        card.classList.remove('dimmed');
+        card.classList.remove('dimmed', 'shift-left', 'shift-right');
       }
     }
     const active = cards[pos];
@@ -420,8 +427,7 @@ function createRoll({
 
   function unfocusCards() {
     for (const card of cards) {
-      card.classList.remove('focused');
-      card.classList.remove('dimmed');
+      card.classList.remove('focused', 'dimmed', 'shift-left', 'shift-right');
     }
   }
 

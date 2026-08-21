@@ -633,6 +633,60 @@ test('the flip sequence shows the panel and focuses the active card', async (t) 
   }
 });
 
+test('neighbors slide away from the focused card to keep the gap', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const firstPos = roll.getFlipOrder()[0];
+  let cards = roll.getCards();
+  for (let i = 0; i < cards.length; i++) {
+    assert.equal(cards[i].classList.contains('shift-left'), i < firstPos, `card ${i} shift-left`);
+    assert.equal(cards[i].classList.contains('shift-right'), i > firstPos, `card ${i} shift-right`);
+  }
+
+  // A win moves focus; the shifts follow the new active card.
+  roll.setCall('heads');
+  await roll.resolveFlip('heads');
+  timers.fireAll();
+
+  const secondPos = roll.getFlipOrder()[1];
+  cards = roll.getCards();
+  for (let i = 0; i < cards.length; i++) {
+    assert.equal(
+      cards[i].classList.contains('shift-left'),
+      i < secondPos,
+      `card ${i} shift-left after win`,
+    );
+    assert.equal(
+      cards[i].classList.contains('shift-right'),
+      i > secondPos,
+      `card ${i} shift-right after win`,
+    );
+  }
+});
+
+test('a loss clears the neighbor shifts', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  await roll.startRoll();
+  roll.coverCards();
+
+  const cards = roll.getCards();
+  assert.ok(
+    cards.some((card) => card.classList.contains('shift-left') || card.classList.contains('shift-right')),
+    'neighbors are shifted before the loss',
+  );
+
+  roll.setCall('heads');
+  await roll.resolveFlip('tails');
+  timers.fireAll();
+
+  for (const card of cards) {
+    assert.equal(card.classList.contains('shift-left'), false);
+    assert.equal(card.classList.contains('shift-right'), false);
+  }
+});
+
 test('won cards stay bright while the next card is focused', async (t) => {
   const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();

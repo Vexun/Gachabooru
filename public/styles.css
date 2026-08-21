@@ -659,6 +659,16 @@ body.hero-leaving .roll-balance {
   z-index: 2;
 }
 
+/* Half the focused-card growth: scale(1.08) widens each side by 4%, so
+   sliding neighbors by the same amount keeps the original gap. */
+.card.shift-left {
+  transform: translateX(-4%);
+}
+
+.card.shift-right {
+  transform: translateX(4%);
+}
+
 .card.dimmed {
   opacity: 0.4;
 }
