@@ -547,11 +547,13 @@ test('the flip panel contains a coin with heads and tails faces', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
   roll.coverCards();
-
   const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+
   assert.ok(coin, 'coin exists');
   assert.ok(coin.querySelector('.coin-heads'));
   assert.ok(coin.querySelector('.coin-tails'));
+  assert.ok(coin.querySelector('.coin-heads').querySelector('.coin-star'));
+  assert.ok(coin.querySelector('.coin-tails').querySelector('.coin-tag'));
   assert.equal(coin.classList.contains('show-heads'), false);
   assert.equal(coin.classList.contains('show-tails'), false);
 });

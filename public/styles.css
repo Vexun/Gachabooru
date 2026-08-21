@@ -667,9 +667,28 @@ body.hero-leaving .roll-balance {
 }
 
 .coin-container {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
+  position: relative;
   perspective: 200px;
+}
+
+/* Soft ground shadow under the coin. */
+.coin-container::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 58px;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.45), transparent 70%);
+}
+
+.coin-container:has(.coin.flipping)::after {
+  transform: translateX(-50%) scale(0.85);
+  opacity: 0.7;
 }
 
 .coin {
@@ -686,19 +705,99 @@ body.hero-leaving .roll-balance {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-weight: 700;
-  font-size: 1.5rem;
+}
+
+/* Minted rim: a conic-sheen ring just inside the edge. */
+.coin-face::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 210deg,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.06) 12%,
+    rgba(0, 0, 0, 0.16) 25%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0.42) 55%,
+    rgba(0, 0, 0, 0.2) 70%,
+    rgba(255, 255, 255, 0.08) 85%,
+    rgba(255, 255, 255, 0.5)
+  );
+  -webkit-mask: radial-gradient(circle, transparent 61%, #000 62%);
+  mask: radial-gradient(circle, transparent 61%, #000 62%);
 }
 
 .coin-heads {
-  background: #f0c040;
-  color: #332200;
+  background: radial-gradient(circle at 32% 28%, #ffe9a8, #f0c040 45%, #a87908 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.6),
+    inset 0 -3px 6px rgba(90, 60, 0, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .coin-tails {
-  background: #c0c0c0;
-  color: #1a1a1a;
+  background: radial-gradient(circle at 32% 28%, #f2f5fa, #c7ccd9 45%, #767e92 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.7),
+    inset 0 -3px 6px rgba(40, 48, 66, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.5);
   transform: rotateX(180deg);
+}
+
+/* Accent glow while the coin spins. Kept on the faces because a filter
+   on .coin itself would flatten its preserve-3d children. */
+.coin.flipping .coin-heads {
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.6),
+    inset 0 -3px 6px rgba(90, 60, 0, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(240, 192, 64, 0.45);
+}
+
+.coin.flipping .coin-tails {
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.7),
+    inset 0 -3px 6px rgba(40, 48, 66, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(0, 155, 230, 0.4);
+}
+
+/* Gacha star embossed on heads. */
+.coin-star {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(160deg, #fff3c4, #d9a520 75%);
+  clip-path: polygon(
+    50% 0%, 61% 35%, 98% 35%, 68% 57%,
+    79% 91%, 50% 70%, 21% 91%, 32% 57%,
+    2% 35%, 39% 35%
+  );
+  filter: drop-shadow(0 1px 1px rgba(90, 60, 0, 0.6));
+}
+
+/* Danbooru tag embossed on tails. */
+.coin-tag {
+  position: relative;
+  width: 34px;
+  height: 22px;
+  background: linear-gradient(160deg, #ffffff, #a7afc2 75%);
+  clip-path: polygon(0 0, 62% 0, 100% 50%, 62% 100%, 0 100%);
+  filter: drop-shadow(0 1px 1px rgba(40, 48, 66, 0.55));
+}
+
+.coin-tag::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #eef1f7, #8a93a8);
+  box-shadow: inset 0 1px 2px rgba(40, 48, 66, 0.6);
 }
 
 .coin.flipping {

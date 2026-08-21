@@ -567,9 +567,11 @@ active card while dimming the others, and slides the flip panel in. See
 4. Confirm the flip panel slides up and the active card scales up with a
    glow while the other covered cards dim.
 5. Click Heads or Tails, then click Flip.
-6. Confirm the coin spins fast, decelerates visibly, and settles on the
-   result face. The spin length varies per flip between about 0.9 and
-   3 seconds.
+6. Confirm the coin has a minted-metal look: a sheened rim on both faces,
+   an embossed gacha star on the gold heads face, and an embossed tag on
+   the silver tails face, with a soft ground shadow below. Confirm both
+   motifs stay legible through the spin and settle on the result face.
+   The spin length varies per flip between about 0.9 and 3 seconds.
 7. Confirm the coin holds on the settled face for about 0.6 seconds,
    then the outcome lands: the card reveals and the result text appears.
 8. Win two cards and confirm both won images stay bright while the next

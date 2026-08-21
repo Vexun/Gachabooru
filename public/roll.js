@@ -109,10 +109,15 @@ function createRoll({
   coin.className = 'coin';
   const headsFace = document.createElement('div');
   headsFace.className = 'coin-face coin-heads';
-  headsFace.textContent = 'H';
+  const star = document.createElement('div');
+  star.className = 'coin-star';
+  headsFace.append(star);
   const tailsFace = document.createElement('div');
   tailsFace.className = 'coin-face coin-tails';
-  tailsFace.textContent = 'T';
+  const tag = document.createElement('div');
+  tag.className = 'coin-tag';
+  tag.setAttribute('data-hole', '');
+  tailsFace.append(tag);
   coin.append(headsFace, tailsFace);
   coinContainer.append(coin);
 
