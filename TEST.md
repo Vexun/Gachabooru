@@ -557,7 +557,9 @@ active card while dimming the others, and slides the flip panel in. See
     flips of 1950 ms or longer add the extra-turn `spin-long` class.
   - A spinner overlay shows while the roll pool and card images load and
     hides when the slide-in begins, on a failed pool request, and on any
-    roll reset.
+    roll reset. It stays anchored to the card-area wrap (reserved height
+    while loading), and on a reroll after a loss it fades in only after
+    the previous cards have exited upward.
   - Dispatching `animationend` on the coin settles it, waits for the
     resolution pause, then announces the face through the `.flip-live`
     region and resolves the flip (a win records a pending win; a tails
@@ -571,7 +573,10 @@ active card while dimming the others, and slides the flip panel in. See
 2. Open `http://127.0.0.1:3000` in a browser.
 3. Roll and play through to the flip sequence.
 4. Confirm a spinning accent-blue ring appears while the roll loads and
-   fades away quickly as the cards begin sliding in.
+   fades away quickly as the cards begin sliding in. The ring holds a
+   fixed spot in the card entry zone, does not drift while the layout
+   changes, and on a reroll after a loss it fades in only after the old
+   cards have moved up and out.
 5. Confirm the flip panel slides up and the active card scales up with a
    glow while the other covered cards dim.
 6. Click Heads or Tails, then click Flip.

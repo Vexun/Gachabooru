@@ -239,6 +239,42 @@ test('the spinner hides when the pool request fails', async (t) => {
   assert.equal(loading.classList.contains('is-visible'), false);
 });
 
+test('the spinner reserves the card area while loading', async (t) => {
+  const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
+  const wrap = roll.el.querySelector('.roll-grid-wrap');
+  assert.equal(wrap.classList.contains('is-loading'), false);
+  assert.ok(wrap.querySelector('.roll-loading'), 'overlay lives in the card-area wrap');
+
+  await roll.startRoll();
+  assert.equal(wrap.classList.contains('is-loading'), true);
+
+  settleImages(roll);
+
+  assert.equal(wrap.classList.contains('is-loading'), false);
+});
+
+test('on a reroll after a loss the spinner waits for the exit', async (t) => {
+  const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
+  await roll.startRoll();
+  roll.coverCards();
+
+  roll.setCall('heads');
+  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  roll.el.querySelector('.flip-button').click();
+  coin.dispatchEvent({ type: 'animationend' });
+  timers.fireAll();
+  assert.equal(roll.getState(), 'lost');
+
+  const loading = roll.el.querySelector('.roll-loading');
+  const reroll = roll.startRoll();
+  assert.equal(loading.classList.contains('is-visible'), false);
+
+  timers.fireAll();
+  await reroll;
+
+  assert.equal(loading.classList.contains('is-visible'), true);
+});
+
 test('renderCards maps the post score to a rarity class', async (t) => {
   const posts = [
     post(1, 150),

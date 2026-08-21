@@ -246,7 +246,17 @@ body.hero-leaving .roll-balance {
   color: var(--danger);
 }
 
-/* Loading overlay shown while the roll pool and card images load. */
+/* Loading overlay shown while the roll pool and card images load.
+   Anchored to the card-area wrap and given a reserved height while
+   loading so the spinner holds a fixed spot in the card entry zone. */
+.roll-grid-wrap {
+  position: relative;
+}
+
+.roll-grid-wrap.is-loading {
+  min-height: 240px;
+}
+
 .roll-loading {
   position: absolute;
   top: 50%;

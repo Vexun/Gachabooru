@@ -64,12 +64,19 @@ function createRoll({
   const grid = document.createElement('div');
   grid.className = 'roll-grid';
 
+  // The wrap keeps the loading overlay anchored to the card area so it
+  // does not drift when the component height changes.
+  const gridWrap = document.createElement('div');
+  gridWrap.className = 'roll-grid-wrap';
+
   const loadingEl = document.createElement('div');
   loadingEl.className = 'roll-loading';
   loadingEl.setAttribute('aria-hidden', 'true');
   const spinner = document.createElement('div');
   spinner.className = 'roll-spinner';
   loadingEl.append(spinner);
+
+  gridWrap.append(grid, loadingEl);
 
   const errorEl = document.createElement('div');
   errorEl.className = 'roll-error';
@@ -146,7 +153,7 @@ function createRoll({
   const lossEl = document.createElement('div');
   lossEl.className = 'roll-loss';
 
-  root.append(bannerLabel, balanceEl, button, grid, loadingEl, flipPanel, lossEl, resultsEl, errorEl);
+  root.append(bannerLabel, balanceEl, button, gridWrap, flipPanel, lossEl, resultsEl, errorEl);
 
   let banner = null;
   let posts = [];
@@ -183,10 +190,12 @@ function createRoll({
   }
 
   function showLoading() {
+    gridWrap.classList.add('is-loading');
     loadingEl.classList.add('is-visible');
   }
 
   function hideLoading() {
+    gridWrap.classList.remove('is-loading');
     loadingEl.classList.remove('is-visible');
   }
 
@@ -789,7 +798,6 @@ function createRoll({
     errorEl.hidden = true;
     cancelCover();
     clearRollUi();
-    showLoading();
     setRollLoading(true);
     if (onRollStart) {
       await onRollStart();
@@ -800,6 +808,9 @@ function createRoll({
       grid.textContent = '';
       cards = [];
     }
+    // Show the spinner only once the previous cards have finished moving
+    // up and out, so it fades in on a settled card area.
+    showLoading();
     try {
       const nextPosts = await requestPool();
       setRollLoading(false);
