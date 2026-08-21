@@ -255,15 +255,7 @@ test('the spinner reserves the card area while loading', async (t) => {
 
 test('on a reroll after a loss the spinner waits for the exit', async (t) => {
   const { roll, timers } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0.9);
-  await roll.startRoll();
-  roll.coverCards();
-
-  roll.setCall('heads');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
-  roll.el.querySelector('.flip-button').click();
-  coin.dispatchEvent({ type: 'animationend' });
-  timers.fireAll();
-  assert.equal(roll.getState(), 'lost');
+  await playToLoss(roll, timers);
 
   const loading = roll.el.querySelector('.roll-loading');
   const reroll = roll.startRoll();
@@ -487,6 +479,32 @@ function coveredRoll(t, fetchImpl, random) {
   return { roll, timers };
 }
 
+// A random source that returns the given values in order, then 0.
+// Useful when a test needs to pin shuffle order, coin side, and spin
+// duration at once.
+function seqRandom(values) {
+  let call = -1;
+  return () => values[++call] ?? 0;
+}
+
+function coinEl(roll) {
+  return roll.el.querySelector('.coin-container').querySelector('.coin');
+}
+
+function settleCoin(roll) {
+  coinEl(roll).dispatchEvent({ type: 'animationend' });
+}
+
+async function playToLoss(roll, timers) {
+  await roll.startRoll();
+  roll.coverCards();
+  roll.setCall('heads');
+  roll.el.querySelector('.flip-button').click();
+  settleCoin(roll);
+  timers.fireAll();
+  assert.equal(roll.getState(), 'lost');
+}
+
 test('flip order is a permutation of the 5 positions', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
@@ -605,7 +623,7 @@ test('the flip panel contains a coin with heads and tails faces', async (t) => {
   const { roll } = coveredRoll(t, fakeFetch({ posts: fivePosts }), () => 0);
   await roll.startRoll();
   roll.coverCards();
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
 
   assert.ok(coin, 'coin exists');
   assert.ok(coin.querySelector('.coin-heads'));
@@ -725,14 +743,14 @@ test('clicking Flip spins the coin and resolves on animationend', async (t) => {
 
   roll.setCall('heads');
   const flipBtn = roll.el.querySelector('.flip-button');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   flipBtn.click();
 
   assert.equal(coin.classList.contains('flipping'), true);
   assert.equal(flipBtn.disabled, true);
   assert.equal(roll.getPendingWins().length, 0);
 
-  coin.dispatchEvent({ type: 'animationend' });
+  settleCoin(roll);
 
   assert.equal(coin.classList.contains('flipping'), false);
   assert.equal(coin.classList.contains('show-heads'), true);
@@ -759,9 +777,9 @@ test('a coin that settles on tails announces tails and loses the roll', async (t
 
   roll.setCall('heads');
   const flipBtn = roll.el.querySelector('.flip-button');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   flipBtn.click();
-  coin.dispatchEvent({ type: 'animationend' });
+  settleCoin(roll);
   timers.fireAll();
 
   assert.equal(coin.classList.contains('show-tails'), true);
@@ -791,7 +809,7 @@ test('a second Flip press during the coin spin is ignored', async (t) => {
 
   roll.setCall('heads');
   const flipBtn = roll.el.querySelector('.flip-button');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   flipBtn.click();
   flipBtn.click();
 
@@ -805,31 +823,29 @@ test('the coin spin duration starts at 900ms and clears on settle', async (t) =>
   roll.coverCards();
 
   roll.setCall('heads');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   roll.el.querySelector('.flip-button').click();
 
   assert.equal(coin.style.animationDuration, '900ms');
   assert.ok(timers.pending().includes(1100), 'fallback timer matches the minimum duration');
 
-  coin.dispatchEvent({ type: 'animationend' });
+  settleCoin(roll);
 
   assert.equal(coin.style.animationDuration, '');
 });
 
 test('the coin spin duration reaches the 3000ms maximum', async (t) => {
   // Four shuffle reads, one fair-coin read, then the duration read.
-  const seq = [0, 0, 0, 0, 0, 1];
-  let call = -1;
   const { roll, timers } = coveredRoll(
     t,
     fakeFetch({ posts: fivePosts }),
-    () => seq[++call] ?? 0,
+    seqRandom([0, 0, 0, 0, 0, 1]),
   );
   await roll.startRoll();
   roll.coverCards();
 
   roll.setCall('heads');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   roll.el.querySelector('.flip-button').click();
 
   assert.equal(coin.style.animationDuration, '3000ms');
@@ -837,19 +853,16 @@ test('the coin spin duration reaches the 3000ms maximum', async (t) => {
 });
 
 test('a short heads flip spins toward the heads face', async (t) => {
-  // Four shuffle reads, one fair-coin read, then the duration read.
-  const seq = [0, 0, 0, 0, 0, 0];
-  let call = -1;
   const { roll } = coveredRoll(
     t,
     fakeFetch({ posts: fivePosts }),
-    () => seq[++call] ?? 0,
+    seqRandom([0, 0, 0, 0, 0, 0]),
   );
   await roll.startRoll();
   roll.coverCards();
 
   roll.setCall('heads');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   roll.el.querySelector('.flip-button').click();
 
   assert.equal(coin.classList.contains('to-heads'), true);
@@ -858,18 +871,16 @@ test('a short heads flip spins toward the heads face', async (t) => {
 });
 
 test('a short tails flip spins toward the tails face', async (t) => {
-  const seq = [0, 0, 0, 0, 1, 0];
-  let call = -1;
   const { roll } = coveredRoll(
     t,
     fakeFetch({ posts: fivePosts }),
-    () => seq[++call] ?? 0,
+    seqRandom([0, 0, 0, 0, 1, 0]),
   );
   await roll.startRoll();
   roll.coverCards();
 
   roll.setCall('tails');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   roll.el.querySelector('.flip-button').click();
 
   assert.equal(coin.classList.contains('to-tails'), true);
@@ -878,24 +889,22 @@ test('a short tails flip spins toward the tails face', async (t) => {
 });
 
 test('a long flip adds the extra-spin class', async (t) => {
-  const seq = [0, 0, 0, 0, 0, 0.8];
-  let call = -1;
   const { roll } = coveredRoll(
     t,
     fakeFetch({ posts: fivePosts }),
-    () => seq[++call] ?? 0,
+    seqRandom([0, 0, 0, 0, 0, 0.8]),
   );
   await roll.startRoll();
   roll.coverCards();
 
   roll.setCall('heads');
-  const coin = roll.el.querySelector('.coin-container').querySelector('.coin');
+  const coin = coinEl(roll);
   roll.el.querySelector('.flip-button').click();
 
   assert.equal(coin.classList.contains('spin-long'), true);
   assert.equal(coin.classList.contains('to-heads'), true);
 
-  coin.dispatchEvent({ type: 'animationend' });
+  settleCoin(roll);
 
   assert.equal(coin.classList.contains('show-heads'), true);
 });

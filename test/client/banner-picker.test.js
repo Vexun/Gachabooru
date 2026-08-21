@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createDocument } = require('./helpers');
+const { createDocument, fakeTimers } = require('./helpers');
 const { createBannerPicker } = require('../../public/banner-picker');
 
 function fakeFetch(results) {
@@ -31,6 +31,33 @@ test('renders an input', () => {
   assert.ok(input);
   assert.equal(input.type, 'text');
   assert.match(input.placeholder, /tag/);
+});
+
+test('input events debounce the search into one request', async () => {
+  const { doc } = createDocument();
+  const timers = fakeTimers();
+  let searches = 0;
+  const picker = createBannerPicker({
+    document: doc,
+    fetch: async () => {
+      searches += 1;
+      return { ok: true, json: async () => ({ results: [] }) };
+    },
+    debounceMs: 200,
+    setTimeout: timers.setTimeout,
+    clearTimeout: timers.clearTimeout,
+  });
+  picker.input.value = 'hatsune';
+
+  picker.input.dispatchEvent({ type: 'input' });
+  picker.input.dispatchEvent({ type: 'input' });
+  picker.input.dispatchEvent({ type: 'input' });
+  assert.equal(searches, 0, 'no search while the debounce is pending');
+
+  timers.fireAll();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(searches, 1);
 });
 
 test('shows suggestions for a query', async () => {

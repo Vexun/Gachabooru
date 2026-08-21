@@ -245,7 +245,7 @@ test('buildRollPool fetches deeper pages until 5 eligible posts exist', async ()
   const result = await buildRollPool(fakeDanbooru, { tag: 'x' });
   assert.equal(result.ok, true);
   assert.equal(result.pool.length, 5);
-  assert.ok(pageCalls >= 2);
+  assert.equal(pageCalls, 2);
 });
 
 test('buildRollPool excludes earned posts', async () => {
@@ -290,4 +290,20 @@ test('buildRollPool blocks when deeper pages run empty', async () => {
 
   const result = await buildRollPool(fakeDanbooru, { tag: 'x' });
   assert.equal(result.ok, false);
+});
+
+test('buildRollPool stops at the default page cap when pages never yield enough', async () => {
+  const pagesRequested = [];
+  const fakeDanbooru = {
+    searchPosts: async ({ page }) => {
+      pagesRequested.push(page);
+      // Every post is already earned, so eligibility never reaches 5.
+      return [rawPost(1)];
+    },
+  };
+
+  const result = await buildRollPool(fakeDanbooru, { tag: 'x', earnedIds: [1] });
+
+  assert.deepEqual(pagesRequested, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.deepEqual(result, { ok: false, reason: 'insufficient' });
 });

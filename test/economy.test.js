@@ -31,6 +31,14 @@ test('accrues 5 rolls per whole hour', () => {
   assert.equal(economy.getBalance(state, 3 * HOUR_MS), 15);
 });
 
+test('repeated reads within the same hour do not double-grant', () => {
+  const state = makeState(0, 0);
+  assert.equal(economy.getBalance(state, HOUR_MS), 5);
+  assert.equal(economy.getBalance(state, HOUR_MS + 1), 5);
+  assert.equal(economy.getBalance(state, HOUR_MS + 2), 5);
+  assert.equal(economy.getBalance(state, 2 * HOUR_MS), 10);
+});
+
 test('floors to whole hours elapsed', () => {
   const state = makeState(0, 0);
   assert.equal(economy.getBalance(state, 1.5 * HOUR_MS), 5);

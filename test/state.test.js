@@ -148,6 +148,21 @@ test('saveState skips the write when nothing changed', () => {
   assert.equal(fs.existsSync(`${file}.bak`), false);
 });
 
+test('loadState backfills missing fields from an older state file', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const dir = tempDir();
+  const file = path.join(dir, 'state.json');
+  fs.writeFileSync(file, JSON.stringify({ balance: 12 }));
+
+  const state = loadState(file, 1000);
+
+  assert.equal(state.balance, 12);
+  assert.deepEqual(state.earned_posts, []);
+  assert.deepEqual(state.pending_downloads, []);
+  assert.equal(state.first_open_bonus_claimed, false);
+  assert.equal(typeof state.last_accrual_at, 'number');
+});
+
 test('loadState recovers from the backup when the main file is corrupt', (t) => {
   t.mock.method(console, 'warn', () => {});
   const dir = tempDir();

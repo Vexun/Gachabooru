@@ -37,7 +37,7 @@ function paginatedFetch(allEntries, pageSize) {
   });
 }
 
-function makeGallery(t, fetchImpl, pageSize = 2) {
+function makeGallery(fetchImpl, pageSize = 2) {
   const { doc } = createDocument();
   const gallery = createGallery({ document: doc, fetch: fetchImpl, pageSize });
   return { gallery, doc };
@@ -49,8 +49,8 @@ function settle() {
 
 const twoEntries = [entry(1, '2026-01-01T00:00:00.000Z'), entry(2, '2026-01-02T00:00:00.000Z')];
 
-test('renders a grid of earned images', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+test('renders a grid of earned images', async () => {
+  const { gallery } = makeGallery(paginatedFetch(twoEntries, 2), 2);
 
   await gallery.load();
 
@@ -60,16 +60,16 @@ test('renders a grid of earned images', async (t) => {
   assert.equal(items[0].dataset.postId, '1');
 });
 
-test('hides the pager when everything fits on one page', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+test('hides the pager when everything fits on one page', async () => {
+  const { gallery } = makeGallery(paginatedFetch(twoEntries, 2), 2);
 
   await gallery.load();
 
   assert.equal(gallery.el.querySelector('.gallery-pager').hidden, true);
 });
 
-test('shows an empty state when there are no items', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch([], 2), 2);
+test('shows an empty state when there are no items', async () => {
+  const { gallery } = makeGallery(paginatedFetch([], 2), 2);
 
   await gallery.load();
 
@@ -103,9 +103,9 @@ test('defaults to 20 images per page', async () => {
   assert.equal(gallery.getPageCount(), 2);
 });
 
-test('goToPage replaces the grid with the target page', async (t) => {
+test('goToPage replaces the grid with the target page', async () => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
   assert.deepEqual(gallery.getItems().map((e) => e.post_id), [1, 2]);
 
@@ -116,9 +116,9 @@ test('goToPage replaces the grid with the target page', async (t) => {
   assert.equal(gallery.el.querySelectorAll('.gallery-item').length, 2);
 });
 
-test('the pager disables the edge buttons at the boundaries', async (t) => {
+test('the pager disables the edge buttons at the boundaries', async () => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   const pager = gallery.el.querySelector('.gallery-pager');
@@ -136,9 +136,9 @@ test('the pager disables the edge buttons at the boundaries', async (t) => {
   assert.equal(pager.querySelector('.pager-last').disabled, true);
 });
 
-test('page numbers mark the current page and jump on click', async (t) => {
+test('page numbers mark the current page and jump on click', async () => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   const numbers = gallery.el.querySelectorAll('.page-number');
@@ -153,9 +153,9 @@ test('page numbers mark the current page and jump on click', async (t) => {
   assert.equal(gallery.getPage(), 2);
 });
 
-test('the pager window keeps the first and last pages with ellipses', async (t) => {
+test('the pager window keeps the first and last pages with ellipses', async () => {
   const all = Array.from({ length: 16 }, (_, i) => entry(i + 1, '2026-01-01T00:00:00.000Z'));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
   await gallery.goToPage(4);
 
@@ -164,9 +164,9 @@ test('the pager window keeps the first and last pages with ellipses', async (t) 
   assert.equal(gallery.el.querySelectorAll('.pager-ellipsis').length, 1);
 });
 
-test('the skip buttons jump to the first and last page', async (t) => {
+test('the skip buttons jump to the first and last page', async () => {
   const all = Array.from({ length: 16 }, (_, i) => entry(i + 1, '2026-01-01T00:00:00.000Z'));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   gallery.el.querySelector('.pager-last').click();
@@ -180,9 +180,9 @@ test('the skip buttons jump to the first and last page', async (t) => {
   assert.deepEqual(gallery.getItems().map((e) => e.post_id), [1, 2]);
 });
 
-test('the next and previous pager buttons move one page', async (t) => {
+test('the next and previous pager buttons move one page', async () => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   gallery.el.querySelector('.pager-next').click();
@@ -194,9 +194,9 @@ test('the next and previous pager buttons move one page', async (t) => {
   assert.equal(gallery.getPage(), 1);
 });
 
-test('load resets to the first page', async (t) => {
+test('load resets to the first page', async () => {
   const all = [1, 2, 3].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
 
   await gallery.load();
   await gallery.goToPage(2);
@@ -209,10 +209,10 @@ test('load resets to the first page', async (t) => {
   assert.equal(gallery.getItems()[0].post_id, 1);
 });
 
-test('marks images with a pending badge when the file is missing', async (t) => {
+test('marks images with a pending badge when the file is missing', async () => {
   const ok = { ...entry(4, '2026-01-04T00:00:00.000Z'), downloaded: true };
   const pending = { ...entry(3, '2026-01-03T00:00:00.000Z'), downloaded: false };
-  const { gallery } = makeGallery(t, paginatedFetch([ok, pending], 2), 2);
+  const { gallery } = makeGallery(paginatedFetch([ok, pending], 2), 2);
 
   await gallery.load();
 
@@ -223,8 +223,8 @@ test('marks images with a pending badge when the file is missing', async (t) => 
   assert.equal(chip.textContent, 'pending');
 });
 
-test('clicking an item opens the full-size view', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+test('clicking an item opens the full-size view', async () => {
+  const { gallery } = makeGallery(paginatedFetch(twoEntries, 2), 2);
   await gallery.load();
 
   gallery.el.querySelectorAll('.gallery-item')[1].click();
@@ -236,11 +236,10 @@ test('clicking an item opens the full-size view', async (t) => {
   assert.equal(gallery.el.querySelector('.gallery-post-link').href, 'https://danbooru.donmai.us/posts/2');
 });
 
-test('deleting requires confirmation and refreshes the page', async (t) => {
+test('deleting requires confirmation and refreshes the page', async () => {
   let deleted = null;
   let entries = [entry(1, '2026-01-01T00:00:00.000Z'), entry(2, '2026-01-02T00:00:00.000Z')];
   const { gallery } = makeGallery(
-    t,
     fakeFetch(async (url, opts) => {
       if (opts.method === 'DELETE') {
         deleted = url;
@@ -273,8 +272,8 @@ test('deleting requires confirmation and refreshes the page', async (t) => {
   assert.equal(gallery.el.querySelectorAll('.gallery-item').length, 1);
 });
 
-test('closing the detail view hides it without deleting', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+test('closing the detail view hides it without deleting', async () => {
+  const { gallery } = makeGallery(paginatedFetch(twoEntries, 2), 2);
   await gallery.load();
   gallery.el.querySelectorAll('.gallery-item')[0].click();
 
@@ -284,9 +283,69 @@ test('closing the detail view hides it without deleting', async (t) => {
   assert.equal(gallery.getItems().length, 2);
 });
 
-test('prev and next buttons move through the images', async (t) => {
+test('a failed delete keeps the detail view open', async () => {
+  const { gallery } = makeGallery(
+    fakeFetch(async (url, opts) => {
+      if (opts.method === 'DELETE') {
+        return { ok: false, status: 500, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ entries: twoEntries, page: 1, limit: 2, total: 2 }),
+      };
+    }),
+    2,
+  );
+  await gallery.load();
+  gallery.el.querySelectorAll('.gallery-item')[0].click();
+
+  const deleteBtn = gallery.el.querySelector('.gallery-delete');
+  deleteBtn.click();
+  deleteBtn.click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(gallery.isDetailOpen(), true);
+  assert.equal(gallery.getItems().length, 2);
+});
+
+test('a failed page fetch keeps the current grid', async () => {
+  let failNext = false;
+  const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
+  const { gallery } = makeGallery(
+    fakeFetch(async (url) => {
+      if (failNext) {
+        throw new Error('down');
+      }
+      const parsed = new URL(url, 'http://localhost');
+      const page = Number(parsed.searchParams.get('page')) || 1;
+      const start = (page - 1) * 2;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          entries: all.slice(start, start + 2),
+          page,
+          limit: 2,
+          total: all.length,
+        }),
+      };
+    }),
+    2,
+  );
+  await gallery.load();
+
+  failNext = true;
+  const loaded = await gallery.goToPage(2);
+
+  assert.equal(loaded, false);
+  assert.equal(gallery.getPage(), 1);
+  assert.deepEqual(gallery.getItems().map((e) => e.post_id), [1, 2]);
+});
+
+test('prev and next buttons move through the images', async () => {
   const all = [1, 2].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   gallery.openDetail(all[0]);
@@ -302,9 +361,9 @@ test('prev and next buttons move through the images', async (t) => {
   assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '1 of 2');
 });
 
-test('arrow keys navigate and Escape closes the detail view', async (t) => {
+test('arrow keys navigate and Escape closes the detail view', async () => {
   const all = [1, 2].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery, doc } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery, doc } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   gallery.openDetail(all[0]);
@@ -323,9 +382,9 @@ test('arrow keys navigate and Escape closes the detail view', async (t) => {
   assert.equal(gallery.getDetailIndex(), -1);
 });
 
-test('next at the end of a page loads the next page and continues', async (t) => {
+test('next at the end of a page loads the next page and continues', async () => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
 
   gallery.openDetail(all[0]);
@@ -347,9 +406,9 @@ test('next at the end of a page loads the next page and continues', async (t) =>
   assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '4 of 4');
 });
 
-test('prev at the start of a page loads the previous page from its end', async (t) => {
+test('prev at the start of a page loads the previous page from its end', async () => {
   const all = [1, 2, 3, 4].map((id) => entry(id, `2026-01-0${id}T00:00:00.000Z`));
-  const { gallery } = makeGallery(t, paginatedFetch(all, 2), 2);
+  const { gallery } = makeGallery(paginatedFetch(all, 2), 2);
   await gallery.load();
   await gallery.goToPage(2);
 
@@ -364,8 +423,8 @@ test('prev at the start of a page loads the previous page from its end', async (
   assert.equal(gallery.el.querySelector('.gallery-counter').textContent, '2 of 4');
 });
 
-test('prev is disabled at the first image', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+test('prev is disabled at the first image', async () => {
+  const { gallery } = makeGallery(paginatedFetch(twoEntries, 2), 2);
   await gallery.load();
 
   gallery.openDetail(twoEntries[0]);
@@ -376,8 +435,8 @@ test('prev is disabled at the first image', async (t) => {
   assert.equal(gallery.getDetailIndex(), 0);
 });
 
-test('next is disabled at the last image when everything is loaded', async (t) => {
-  const { gallery } = makeGallery(t, paginatedFetch(twoEntries, 2), 2);
+test('next is disabled at the last image when everything is loaded', async () => {
+  const { gallery } = makeGallery(paginatedFetch(twoEntries, 2), 2);
   await gallery.load();
 
   gallery.openDetail(twoEntries[1]);

@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const { createApp } = require('../server/index');
 const { tempDir } = require('./helpers');
 
-function fakeTimers() {
+function fakeScheduler() {
   const scheduled = [];
   return {
     setTimeout(cb, ms) {
@@ -52,7 +52,7 @@ function queueOne(store) {
 }
 
 test('startDrain schedules a startup and an interval pass', (t) => {
-  const timers = fakeTimers();
+  const timers = fakeScheduler();
   const { startDrain } = makeApp(t, {
     drainPending: async () => ({ retried: 0, remaining: 0 }),
   });
@@ -73,7 +73,7 @@ test('startDrain schedules a startup and an interval pass', (t) => {
 });
 
 test('startDrain drains and saves when downloads succeed', async (t) => {
-  const timers = fakeTimers();
+  const timers = fakeScheduler();
   const { store, startDrain, saveSpy } = makeApp(t, {
     drainPending: async () => ({ retried: 1, remaining: 0 }),
   });
@@ -92,7 +92,7 @@ test('startDrain drains and saves when downloads succeed', async (t) => {
 });
 
 test('startDrain skips the drain when the queue is empty', async (t) => {
-  const timers = fakeTimers();
+  const timers = fakeScheduler();
   const { startDrain, saveSpy } = makeApp(t, {
     drainPending: async () => {
       throw new Error('should not be called');
@@ -112,7 +112,7 @@ test('startDrain skips the drain when the queue is empty', async (t) => {
 });
 
 test('startDrain does not save when nothing retried', async (t) => {
-  const timers = fakeTimers();
+  const timers = fakeScheduler();
   const { store, startDrain, saveSpy } = makeApp(t, {
     drainPending: async () => ({ retried: 0, remaining: 2 }),
   });
@@ -131,7 +131,7 @@ test('startDrain does not save when nothing retried', async (t) => {
 });
 
 test('startDrain guards against overlapping runs', async (t) => {
-  const timers = fakeTimers();
+  const timers = fakeScheduler();
   const { store, startDrain, saveSpy } = makeApp(t, {
     drainPending: () =>
       new Promise((resolve) => {
@@ -157,7 +157,7 @@ test('startDrain guards against overlapping runs', async (t) => {
 });
 
 test('startDrain swallows downloader errors and recovers on the next pass', async (t) => {
-  const timers = fakeTimers();
+  const timers = fakeScheduler();
   const { store, startDrain, saveSpy } = makeApp(t, {
     drainPending: (() => {
       let drains = 0;

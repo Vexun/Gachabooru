@@ -1,6 +1,16 @@
 'use strict';
 
-function createBannerPicker({ document, fetch: fetchImpl, onChange, onSubmit, debounceMs = 200 }) {
+function createBannerPicker({
+  document,
+  fetch: fetchImpl,
+  onChange,
+  onSubmit,
+  debounceMs = 200,
+  setTimeout: timerSetTimeout,
+  clearTimeout: timerClearTimeout,
+}) {
+  const setTimeoutImpl = timerSetTimeout || setTimeout;
+  const clearTimeoutImpl = timerClearTimeout || clearTimeout;
   const root = document.createElement('div');
   root.className = 'banner-picker';
 
@@ -150,9 +160,9 @@ function createBannerPicker({ document, fetch: fetchImpl, onChange, onSubmit, de
 
   input.addEventListener('input', () => {
     if (debounceTimer) {
-      clearTimeout(debounceTimer);
+      clearTimeoutImpl(debounceTimer);
     }
-    debounceTimer = setTimeout(() => search(input.value), debounceMs);
+    debounceTimer = setTimeoutImpl(() => search(input.value), debounceMs);
   });
 
   input.addEventListener('keydown', (event) => {

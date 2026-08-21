@@ -82,7 +82,7 @@ class FakeElement {
   get textContent() {
     let out = this._text;
     for (const child of this.children) {
-      out += child.nodeType === NODE_TEXT ? child.textContent : child.textContent;
+      out += child.textContent;
     }
     return out;
   }
@@ -209,8 +209,10 @@ function parseSelector(selector) {
   let idx = 0;
   if (parts.length && /^[a-zA-Z*]/.test(parts[0])) {
     out.tag = parts[0].toUpperCase();
+    // Skip the tag token; the class/id pairs start at index 1.
     idx = 1;
-  } else {
+  } else if (parts.length) {
+    // No tag token; class/id pairs still start at index 1.
     idx = 1;
   }
   while (idx + 1 < parts.length) {
@@ -226,11 +228,8 @@ function parseSelector(selector) {
   return out;
 }
 
-function matchesSelector(el, selector) {
-  if (selector.includes(' ')) {
-    return false;
-  }
-  const parsed = parseSelector(selector);
+function matchesSimple(el, simple) {
+  const parsed = parseSelector(simple);
   if (el.nodeType !== NODE_ELEMENT) {
     return false;
   }
@@ -242,6 +241,29 @@ function matchesSelector(el, selector) {
   }
   for (const cls of parsed.classes) {
     if (!el.classList.contains(cls)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Supports compound selectors ("div.card") and descendant selectors
+// (".coin-container .coin"). Combinators other than whitespace are not
+// supported.
+function matchesSelector(el, selector) {
+  const parts = selector.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return false;
+  }
+  if (!matchesSimple(el, parts[parts.length - 1])) {
+    return false;
+  }
+  let node = el.parentNode;
+  for (let i = parts.length - 2; i >= 0; i--) {
+    while (node && !matchesSimple(node, parts[i])) {
+      node = node.parentNode;
+    }
+    if (!node || node.nodeType !== NODE_ELEMENT) {
       return false;
     }
   }

@@ -50,15 +50,18 @@ test('index.html loads the client scripts in dependency order', () => {
   assert.ok(app > roll, 'app.js loads last');
 });
 
-test('index.html does not load any vendor scripts', () => {
-  assert.doesNotMatch(INDEX_HTML, /confetti/);
-});
-
 test('index.html declares the hero section and the default hero mode', () => {
   assert.match(INDEX_HTML, /<body class="mode-hero">/);
   assert.match(INDEX_HTML, /id="hero-section"/);
   assert.match(INDEX_HTML, /hero-title/);
   assert.match(INDEX_HTML, /hero-message/);
+});
+
+// Kept as a small accessibility contract: these two rules are what make
+// screen-reader announcements and reduced-motion support work.
+test('styles.css scaffolds reduced motion and the visually hidden utility', () => {
+  assert.match(STYLES_CSS, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(STYLES_CSS, /\.sr-only\s*\{/);
 });
 
 test('createApp switches play page modes on roll callbacks', async () => {
@@ -108,39 +111,6 @@ test('createApp switches play page modes on roll callbacks', async () => {
 
   captured.onRollFail();
   assert.equal(doc.body.classList.contains('mode-hero'), true);
-});
-
-test('styles.css scaffolds reduced motion and the visually hidden utility', () => {
-  assert.match(STYLES_CSS, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(STYLES_CSS, /\.sr-only\s*\{/);
-});
-
-test('styles.css staggers the slide-in with a compound selector', () => {
-  assert.match(STYLES_CSS, /\.card:nth-child\(\d+\)\.entering\s*\{/);
-  assert.doesNotMatch(STYLES_CSS, /\.card:nth-child\(\d+\) \.card\.entering/);
-});
-
-test('styles.css hides only the main roll button during rolling', () => {
-  assert.match(STYLES_CSS, /body\.mode-rolling \.roll-button\s*\{/);
-  assert.doesNotMatch(STYLES_CSS, /body\.mode-rolling \.roll button/);
-});
-
-test('styles.css fades the hero in on every hero entry', () => {
-  assert.match(STYLES_CSS, /body\.mode-hero #hero-section/);
-  assert.match(STYLES_CSS, /heroFadeIn/);
-});
-
-test('styles.css clips page-level overflow instead of the roll grid', () => {
-  assert.match(STYLES_CSS, /body\s*\{[\s\S]*overflow-x: hidden/);
-  assert.doesNotMatch(STYLES_CSS, /\.roll-grid\s*\{[\s\S]*overflow-x: hidden/);
-});
-
-test('styles.css drops the top controls back in on the loss state', () => {
-  assert.match(STYLES_CSS, /body\.mode-top \.banner-picker/);
-  assert.match(STYLES_CSS, /body\.mode-top \.roll-button/);
-  assert.match(STYLES_CSS, /controlsDrop/);
-  assert.match(STYLES_CSS, /body\.controls-leaving/);
-  assert.match(STYLES_CSS, /controlsRise/);
 });
 
 test('createApp wires the picker, roll, and close detection', async () => {

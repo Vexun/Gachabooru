@@ -171,6 +171,22 @@ test('fetchBuffer returns the bytes and retries on failure', async () => {
   assert.ok(attempts >= 2);
 });
 
+test('fetchBuffer throws after exhausting its retries', async () => {
+  let attempts = 0;
+  const downloader = new Downloader({
+    collectionsDir: tempDir(),
+    backoffMs: 0,
+    retries: 1,
+    fetchImpl: async () => {
+      attempts += 1;
+      return { ok: false, status: 503 };
+    },
+  });
+
+  await assert.rejects(() => downloader.fetchBuffer('https://cdn.donmai.us/x.jpg'), /HTTP 503/);
+  assert.equal(attempts, 2);
+});
+
 test('bank retries a missing file for an already-earned post', async () => {
   const dir = tempDir();
   let downloads = 0;

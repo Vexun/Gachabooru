@@ -18,6 +18,17 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitFor(predicate, timeoutMs = 1000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) {
+      return;
+    }
+    await wait(5);
+  }
+  throw new Error('condition not met before timeout');
+}
+
 async function openWs(url) {
   const ws = new WebSocket(url);
   await new Promise((resolve, reject) => {
@@ -49,7 +60,7 @@ function makeWatch(t, graceMs) {
 test('does not shut down before any client connects', async (t) => {
   const { url, events } = makeWatch(t, 40);
   await url;
-  await wait(200);
+  await wait(100);
 
   assert.equal(events.shutdown, false);
 });
@@ -61,7 +72,7 @@ test('shuts down after the last client disconnects', async (t) => {
   assert.equal(watch.wss.clients.size, 1);
 
   ws.close();
-  await wait(300);
+  await waitFor(() => events.shutdown);
 
   assert.equal(events.shutdown, true);
 });
@@ -74,11 +85,12 @@ test('stays up when a client reconnects within the grace period', async (t) => {
   first.close();
 
   const second = await openWs(wsUrl);
-  await wait(400);
+  // Outlast the grace window while the second client is connected.
+  await wait(200);
   assert.equal(events.shutdown, false);
 
   second.close();
-  await wait(300);
+  await waitFor(() => events.shutdown);
   assert.equal(events.shutdown, true);
 });
 
@@ -91,11 +103,12 @@ test('tracks multiple concurrent clients', async (t) => {
   assert.equal(watch.wss.clients.size, 2);
 
   one.close();
-  await wait(150);
+  // Outlast the grace window while one client remains.
+  await wait(120);
   assert.equal(events.shutdown, false);
 
   two.close();
-  await wait(300);
+  await waitFor(() => events.shutdown);
   assert.equal(events.shutdown, true);
 });
 

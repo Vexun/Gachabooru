@@ -6,7 +6,36 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { createApp } = require('../server/index');
+const { Downloader } = require('../server/download');
+const { StateStore } = require('../server/state');
 const { tempDir, startServer } = require('./helpers');
+
+// Boots an app against fresh temp dirs, optionally seeding the state
+// store first and injecting fakes. Returns everything a test needs to
+// reach the API or inspect the store and collections directory.
+async function bootApp(t, { state, danbooru, downloader } = {}) {
+  const dataDir = tempDir();
+  const collectionsDir = tempDir();
+  const store = new StateStore(path.join(dataDir, 'state.json'));
+  if (state) {
+    Object.assign(store.get(), state);
+    store.save();
+  }
+  // A function downloader receives the real collections directory so a
+  // test can build a genuine Downloader bound to it.
+  const resolvedDownloader =
+    typeof downloader === 'function' ? downloader(collectionsDir) : downloader;
+  const base = await startServer(
+    t,
+    createApp({
+      dataDir,
+      collectionsDir,
+      danbooru: danbooru || { buildRollPool: async () => ({ ok: true, pool: [] }) },
+      downloader: resolvedDownloader,
+    }).app,
+  );
+  return { base, store, dataDir, collectionsDir };
+}
 
 test('GET /api/health returns 200', async (t) => {
   const app = createApp({ dataDir: tempDir(), collectionsDir: tempDir() }).app;
@@ -87,17 +116,8 @@ test('the API rate limiter exempts the health endpoint', async (t) => {
   }
 });
 
-function makeApp(t, overrides) {
-  const app = createApp({
-    dataDir: tempDir(),
-    collectionsDir: tempDir(),
-    ...overrides,
-  }).app;
-  return startServer(t, app);
-}
-
 test('GET /api/autocomplete returns mapped results', async (t) => {
-  const base = await makeApp(t, {
+  const { base } = await bootApp(t, {
     danbooru: {
       autocomplete: async () => [
         { value: 'hatsune_miku', label: 'hatsune miku', category: 4, post_count: 100 },
@@ -114,14 +134,14 @@ test('GET /api/autocomplete returns mapped results', async (t) => {
 });
 
 test('GET /api/autocomplete rejects an empty query with 422', async (t) => {
-  const base = await makeApp(t, { danbooru: { autocomplete: async () => [] } });
+  const { base } = await bootApp(t, { danbooru: { autocomplete: async () => [] } });
 
   const res = await fetch(`${base}/api/autocomplete?q=`);
   assert.equal(res.status, 422);
 });
 
 test('GET /api/autocomplete returns 502 on upstream failure', async (t) => {
-  const base = await makeApp(t, {
+  const { base } = await bootApp(t, {
     danbooru: {
       autocomplete: async () => {
         throw new Error('boom');
@@ -143,13 +163,9 @@ const poolPosts = [
   { id: 5, file_ext: 'jpg', large_file_url: 'https://cdn/v.jpg' },
 ];
 
-function poolApp(t, danbooru) {
-  return makeApp(t, { danbooru });
-}
-
 test('GET /api/roll/pool returns 5 posts', async (t) => {
-  const base = await poolApp(t, {
-    buildRollPool: async () => ({ ok: true, pool: poolPosts }),
+  const { base } = await bootApp(t, {
+    danbooru: { buildRollPool: async () => ({ ok: true, pool: poolPosts }) },
   });
 
   const res = await fetch(`${base}/api/roll/pool?tag=hatsune_miku`);
@@ -160,25 +176,15 @@ test('GET /api/roll/pool returns 5 posts', async (t) => {
 
 test('GET /api/roll/pool excludes earned posts', async (t) => {
   let seenEarned = null;
-  const dataDir = tempDir();
-  const store = require('../server/state').StateStore;
-  const s = new store(`${dataDir}/state.json`);
-  s.get().earned_posts = [{ post_id: 42 }, { post_id: 77 }];
-  s.save();
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir: tempDir(),
-      danbooru: {
-        buildRollPool: async ({ earnedIds }) => {
-          seenEarned = earnedIds;
-          return { ok: true, pool: poolPosts };
-        },
+  const { base } = await bootApp(t, {
+    state: { earned_posts: [{ post_id: 42 }, { post_id: 77 }] },
+    danbooru: {
+      buildRollPool: async ({ earnedIds }) => {
+        seenEarned = earnedIds;
+        return { ok: true, pool: poolPosts };
       },
-    }).app,
-  );
+    },
+  });
 
   const res = await fetch(`${base}/api/roll/pool?tag=hatsune_miku`);
   assert.equal(res.status, 200);
@@ -186,8 +192,8 @@ test('GET /api/roll/pool excludes earned posts', async (t) => {
 });
 
 test('GET /api/roll/pool blocks the roll when the pool is insufficient', async (t) => {
-  const base = await poolApp(t, {
-    buildRollPool: async () => ({ ok: false, reason: 'insufficient' }),
+  const { base } = await bootApp(t, {
+    danbooru: { buildRollPool: async () => ({ ok: false, reason: 'insufficient' }) },
   });
 
   const res = await fetch(`${base}/api/roll/pool?tag=tiny_tag`);
@@ -197,31 +203,24 @@ test('GET /api/roll/pool blocks the roll when the pool is insufficient', async (
 });
 
 test('GET /api/roll/pool rejects a missing tag with 422', async (t) => {
-  const base = await poolApp(t, {
-    buildRollPool: async () => ({ ok: true, pool: poolPosts }),
-  });
+  const { base } = await bootApp(t);
 
   const res = await fetch(`${base}/api/roll/pool?tag=`);
   assert.equal(res.status, 422);
 });
 
 test('GET /api/roll/pool returns 502 on upstream failure', async (t) => {
-  const base = await poolApp(t, {
-    buildRollPool: async () => {
-      throw new Error('boom');
+  const { base } = await bootApp(t, {
+    danbooru: {
+      buildRollPool: async () => {
+        throw new Error('boom');
+      },
     },
   });
 
   const res = await fetch(`${base}/api/roll/pool?tag=hatsune_miku`);
   assert.equal(res.status, 502);
 });
-
-function bankApp(t, downloader) {
-  return makeApp(t, {
-    danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    downloader,
-  });
-}
 
 const bankPost = {
   id: 100,
@@ -237,7 +236,7 @@ test('GET /api/image streams a proxied image', async (t) => {
       return Buffer.from('imgbytes');
     },
   };
-  const base = await bankApp(t, downloader);
+  const { base } = await bootApp(t, { downloader });
 
   const res = await fetch(`${base}/api/image?url=${encodeURIComponent('https://cdn.donmai.us/sample/abc.jpg')}`);
   assert.equal(res.status, 200);
@@ -247,11 +246,13 @@ test('GET /api/image streams a proxied image', async (t) => {
 
 test('GET /api/image rejects URLs outside the CDN allowlist', async (t) => {
   const downloader = { fetchBuffer: async () => Buffer.from('x') };
-  const base = await bankApp(t, downloader);
+  const { base } = await bootApp(t, { downloader });
 
   for (const url of [
     'http://cdn.donmai.us/evil.jpg',
     'https://evil.example.com/x.jpg',
+    // A subdomain of the allowed host must not pass the exact-match check.
+    'https://evil.cdn.donmai.us/x.jpg',
     'file:///etc/passwd',
     'not a url',
   ]) {
@@ -266,7 +267,7 @@ test('GET /api/image returns 502 when the upstream fetch fails', async (t) => {
       throw new Error('boom');
     },
   };
-  const base = await bankApp(t, downloader);
+  const { base } = await bootApp(t, { downloader });
 
   const res = await fetch(`${base}/api/image?url=${encodeURIComponent('https://cdn.donmai.us/x.jpg')}`);
   assert.equal(res.status, 502);
@@ -276,14 +277,15 @@ test('GET /api/image returns 502 when the upstream fetch fails', async (t) => {
 
 test('POST /api/roll/:postId banks the image and triggers a download', async (t) => {
   let banked = null;
-  const downloader = {
-    bank: async (state, args) => {
-      banked = args;
-      state.earned_posts.push({ post_id: args.post.id });
-      return { entry: { post_id: args.post.id }, downloaded: true };
+  const { base } = await bootApp(t, {
+    downloader: {
+      bank: async (state, args) => {
+        banked = args;
+        state.earned_posts.push({ post_id: args.post.id });
+        return { entry: { post_id: args.post.id }, downloaded: true };
+      },
     },
-  };
-  const base = await bankApp(t, downloader);
+  });
 
   const res = await fetch(`${base}/api/roll/100`, {
     method: 'POST',
@@ -299,27 +301,16 @@ test('POST /api/roll/:postId banks the image and triggers a download', async (t)
 });
 
 test('POST /api/roll/:postId is idempotent per post', async (t) => {
-  const dataDir = tempDir();
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().earned_posts = [{ post_id: 100 }];
-  state.save();
-
   let calls = 0;
-  const downloader = {
-    bank: async () => {
-      calls += 1;
-      return { entry: { post_id: 100 }, downloaded: true, already: true };
+  const { base, store } = await bootApp(t, {
+    state: { earned_posts: [{ post_id: 100 }] },
+    downloader: {
+      bank: async () => {
+        calls += 1;
+        return { entry: { post_id: 100 }, downloaded: true, already: true };
+      },
     },
-  };
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir: tempDir(),
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-      downloader,
-    }).app,
-  );
+  });
 
   const body = { post: bankPost, banner_tag: 'hatsune_miku' };
   await fetch(`${base}/api/roll/100`, {
@@ -334,12 +325,11 @@ test('POST /api/roll/:postId is idempotent per post', async (t) => {
   });
 
   assert.equal(calls, 2);
-  assert.equal(state.get().earned_posts.length, 1);
+  assert.equal(store.get().earned_posts.length, 1);
 });
 
 test('POST /api/roll/:postId rejects an unknown or mismatched post', async (t) => {
-  const downloader = { bank: async () => ({ downloaded: false }) };
-  const base = await bankApp(t, downloader);
+  const { base } = await bootApp(t, { downloader: { bank: async () => ({ downloaded: false }) } });
 
   const res = await fetch(`${base}/api/roll/999`, {
     method: 'POST',
@@ -349,9 +339,19 @@ test('POST /api/roll/:postId rejects an unknown or mismatched post', async (t) =
   assert.equal(res.status, 422);
 });
 
+test('POST /api/roll/:postId rejects a non-integer post id', async (t) => {
+  const { base } = await bootApp(t, { downloader: { bank: async () => ({ downloaded: false }) } });
+
+  const res = await fetch(`${base}/api/roll/abc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ post: bankPost, banner_tag: 'hatsune_miku' }),
+  });
+  assert.equal(res.status, 422);
+});
+
 test('POST /api/roll/:postId rejects a missing banner tag', async (t) => {
-  const downloader = { bank: async () => ({ downloaded: false }) };
-  const base = await bankApp(t, downloader);
+  const { base } = await bootApp(t, { downloader: { bank: async () => ({ downloaded: false }) } });
 
   const res = await fetch(`${base}/api/roll/100`, {
     method: 'POST',
@@ -363,13 +363,14 @@ test('POST /api/roll/:postId rejects a missing banner tag', async (t) => {
 
 test('POST /api/roll/:postId sanitizes a path-traversal banner tag before banking', async (t) => {
   let bankedBannerTag = null;
-  const downloader = {
-    bank: async (state, args) => {
-      bankedBannerTag = args.bannerTag;
-      return { entry: { post_id: args.post.id }, downloaded: true };
+  const { base } = await bootApp(t, {
+    downloader: {
+      bank: async (state, args) => {
+        bankedBannerTag = args.bannerTag;
+        return { entry: { post_id: args.post.id }, downloaded: true };
+      },
     },
-  };
-  const base = await bankApp(t, downloader);
+  });
 
   const res = await fetch(`${base}/api/roll/100`, {
     method: 'POST',
@@ -383,13 +384,14 @@ test('POST /api/roll/:postId sanitizes a path-traversal banner tag before bankin
 
 test('POST /api/roll/:postId stores the sanitized banner tag in metadata', async (t) => {
   let bankedBannerTag = null;
-  const downloader = {
-    bank: async (state, args) => {
-      bankedBannerTag = args.bannerTag;
-      return { entry: { post_id: args.post.id }, downloaded: true };
+  const { base } = await bootApp(t, {
+    downloader: {
+      bank: async (state, args) => {
+        bankedBannerTag = args.bannerTag;
+        return { entry: { post_id: args.post.id }, downloaded: true };
+      },
     },
-  };
-  const base = await bankApp(t, downloader);
+  });
 
   const res = await fetch(`${base}/api/roll/100`, {
     method: 'POST',
@@ -402,25 +404,18 @@ test('POST /api/roll/:postId stores the sanitized banner tag in metadata', async
 });
 
 test('a hostile banner tag cannot write outside the collections directory', async (t) => {
-  const collectionsDir = tempDir();
-  const downloader = new (require('../server/download').Downloader)({
-    collectionsDir,
-    backoffMs: 0,
-    fetchImpl: async () => ({
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => new TextEncoder().encode('img').buffer,
-    }),
+  const { base, collectionsDir } = await bootApp(t, {
+    downloader: (dir) =>
+      new Downloader({
+        collectionsDir: dir,
+        backoffMs: 0,
+        fetchImpl: async () => ({
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => new TextEncoder().encode('img').buffer,
+        }),
+      }),
   });
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir: tempDir(),
-      collectionsDir,
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-      downloader,
-    }).app,
-  );
 
   const res = await fetch(`${base}/api/roll/100`, {
     method: 'POST',
@@ -434,25 +429,19 @@ test('a hostile banner tag cannot write outside the collections directory', asyn
   assert.equal(fs.existsSync(path.join(path.dirname(collectionsDir), 'etc', '100.jpg')), false);
 });
 
-const earnedEntries = [
-  { post_id: 1, file_path: 'tag/1.jpg', banner_tag: 'tag', earned_at: '2026-01-01T00:00:00.000Z' },
-  { post_id: 2, file_path: 'tag/2.jpg', banner_tag: 'tag', earned_at: '2026-01-02T00:00:00.000Z' },
-];
+function earnedEntry(postId, day) {
+  return {
+    post_id: postId,
+    file_path: `tag/${postId}.jpg`,
+    banner_tag: 'tag',
+    earned_at: `2026-01-${String(day).padStart(2, '0')}T00:00:00.000Z`,
+  };
+}
 
 test('GET /api/earned lists earned images with pagination metadata', async (t) => {
-  const dataDir = tempDir();
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().earned_posts = earnedEntries;
-  state.save();
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir: tempDir(),
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
+  const { base } = await bootApp(t, {
+    state: { earned_posts: [earnedEntry(1, 1), earnedEntry(2, 2)] },
+  });
 
   const res = await fetch(`${base}/api/earned`);
   assert.equal(res.status, 200);
@@ -464,23 +453,9 @@ test('GET /api/earned lists earned images with pagination metadata', async (t) =
 });
 
 test('GET /api/earned returns newest entries first', async (t) => {
-  const dataDir = tempDir();
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().earned_posts = [
-    { post_id: 1, file_path: 'tag/1.jpg', earned_at: '2026-01-01T00:00:00.000Z' },
-    { post_id: 2, file_path: 'tag/2.jpg', earned_at: '2026-01-05T00:00:00.000Z' },
-    { post_id: 3, file_path: 'tag/3.jpg', earned_at: '2026-01-03T00:00:00.000Z' },
-  ];
-  state.save();
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir: tempDir(),
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
+  const { base } = await bootApp(t, {
+    state: { earned_posts: [earnedEntry(1, 1), earnedEntry(2, 5), earnedEntry(3, 3)] },
+  });
 
   const data = await (await fetch(`${base}/api/earned?limit=3`)).json();
   assert.deepEqual(
@@ -490,25 +465,11 @@ test('GET /api/earned returns newest entries first', async (t) => {
 });
 
 test('GET /api/earned reports the downloaded flag per entry', async (t) => {
-  const dataDir = tempDir();
-  const collectionsDir = tempDir();
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().earned_posts = [
-    { post_id: 1, file_path: 'tag/1.jpg', earned_at: '2026-01-01T00:00:00.000Z' },
-    { post_id: 2, file_path: 'tag/2.jpg', earned_at: '2026-01-02T00:00:00.000Z' },
-  ];
-  state.save();
+  const { base, collectionsDir } = await bootApp(t, {
+    state: { earned_posts: [earnedEntry(1, 1), earnedEntry(2, 2)] },
+  });
   fs.mkdirSync(path.join(collectionsDir, 'tag'), { recursive: true });
   fs.writeFileSync(path.join(collectionsDir, 'tag', '1.jpg'), 'x');
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir,
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
 
   const data = await (await fetch(`${base}/api/earned`)).json();
   const byId = Object.fromEntries(data.entries.map((e) => [e.post_id, e.downloaded]));
@@ -517,23 +478,9 @@ test('GET /api/earned reports the downloaded flag per entry', async (t) => {
 });
 
 test('GET /api/earned paginates with page and limit', async (t) => {
-  const dataDir = tempDir();
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().earned_posts = [1, 2, 3, 4, 5].map((id) => ({
-    post_id: id,
-    file_path: `tag/${id}.jpg`,
-    earned_at: `2026-01-0${id}T00:00:00.000Z`,
-  }));
-  state.save();
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir: tempDir(),
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
+  const { base } = await bootApp(t, {
+    state: { earned_posts: [1, 2, 3, 4, 5].map((id) => earnedEntry(id, id)) },
+  });
 
   const page1 = await (await fetch(`${base}/api/earned?limit=2&page=1`)).json();
   assert.deepEqual(page1.entries.map((e) => e.post_id), [5, 4]);
@@ -550,14 +497,7 @@ test('GET /api/earned paginates with page and limit', async (t) => {
 });
 
 test('GET /api/earned rejects invalid pagination', async (t) => {
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir: tempDir(),
-      collectionsDir: tempDir(),
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
+  const { base } = await bootApp(t);
 
   for (const query of ['page=0', 'page=-1', 'page=abc', 'limit=0', 'limit=300', 'limit=abc']) {
     const res = await fetch(`${base}/api/earned?${query}`);
@@ -566,57 +506,30 @@ test('GET /api/earned rejects invalid pagination', async (t) => {
 });
 
 test('DELETE /api/earned/:postId removes the file and metadata', async (t) => {
-  const dataDir = tempDir();
-  const collectionsDir = tempDir();
+  const { base, dataDir, collectionsDir } = await bootApp(t, {
+    state: { earned_posts: [earnedEntry(1, 1), earnedEntry(2, 2)] },
+  });
   fs.mkdirSync(path.join(collectionsDir, 'tag'), { recursive: true });
   fs.writeFileSync(path.join(collectionsDir, 'tag', '1.jpg'), 'data');
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().earned_posts = earnedEntries;
-  state.save();
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir,
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
 
   const res = await fetch(`${base}/api/earned/1`, { method: 'DELETE' });
   assert.equal(res.status, 200);
   assert.equal(fs.existsSync(path.join(collectionsDir, 'tag', '1.jpg')), false);
-  const onDisk = JSON.parse(fs.readFileSync(`${dataDir}/state.json`, 'utf8'));
+  const onDisk = JSON.parse(fs.readFileSync(path.join(dataDir, 'state.json'), 'utf8'));
   assert.equal(onDisk.earned_posts.length, 1);
 });
 
 test('DELETE /api/earned/:postId returns 404 for an unknown post', async (t) => {
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir: tempDir(),
-      collectionsDir: tempDir(),
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
+  const { base } = await bootApp(t);
 
   const res = await fetch(`${base}/api/earned/999`, { method: 'DELETE' });
   assert.equal(res.status, 404);
 });
 
 test('collections images are served statically', async (t) => {
-  const collectionsDir = tempDir();
+  const { base, collectionsDir } = await bootApp(t);
   fs.mkdirSync(path.join(collectionsDir, 'tag'), { recursive: true });
   fs.writeFileSync(path.join(collectionsDir, 'tag', '1.jpg'), 'imgbytes');
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir: tempDir(),
-      collectionsDir,
-      danbooru: { buildRollPool: async () => ({ ok: true, pool: [] }) },
-    }).app,
-  );
 
   const res = await fetch(`${base}/collections/tag/1.jpg`);
   assert.equal(res.status, 200);
@@ -624,9 +537,7 @@ test('collections images are served statically', async (t) => {
 });
 
 test('GET /api/balance returns the current balance', async (t) => {
-  const base = await makeApp(t, {
-    danbooru: { buildRollPool: async () => ({ ok: true, pool: poolPosts }) },
-  });
+  const { base } = await bootApp(t);
 
   const res = await fetch(`${base}/api/balance`);
   assert.equal(res.status, 200);
@@ -635,7 +546,7 @@ test('GET /api/balance returns the current balance', async (t) => {
 });
 
 test('pool request deducts one roll on success', async (t) => {
-  const base = await makeApp(t, {
+  const { base } = await bootApp(t, {
     danbooru: { buildRollPool: async () => ({ ok: true, pool: poolPosts }) },
   });
 
@@ -651,25 +562,15 @@ test('pool request deducts one roll on success', async (t) => {
 
 test('pool request is blocked with 402 on insufficient balance', async (t) => {
   let poolCalls = 0;
-  const dataDir = tempDir();
-  const state = new (require('../server/state').StateStore)(`${dataDir}/state.json`);
-  state.get().balance = 0;
-  state.get().first_open_bonus_claimed = true;
-  state.save();
-
-  const base = await startServer(
-    t,
-    createApp({
-      dataDir,
-      collectionsDir: tempDir(),
-      danbooru: {
-        buildRollPool: async () => {
-          poolCalls += 1;
-          return { ok: true, pool: poolPosts };
-        },
+  const { base, store } = await bootApp(t, {
+    state: { balance: 0, first_open_bonus_claimed: true },
+    danbooru: {
+      buildRollPool: async () => {
+        poolCalls += 1;
+        return { ok: true, pool: poolPosts };
       },
-    }).app,
-  );
+    },
+  });
 
   const res = await fetch(`${base}/api/roll/pool?tag=hatsune_miku`);
   assert.equal(res.status, 402);
@@ -677,10 +578,11 @@ test('pool request is blocked with 402 on insufficient balance', async (t) => {
 
   const bal = await (await fetch(`${base}/api/balance`)).json();
   assert.equal(bal.balance, 0);
+  assert.equal(store.get().balance, 0);
 });
 
 test('a blocked pool does not consume a roll', async (t) => {
-  const base = await makeApp(t, {
+  const { base } = await bootApp(t, {
     danbooru: {
       buildRollPool: async () => ({ ok: false, reason: 'insufficient' }),
     },
